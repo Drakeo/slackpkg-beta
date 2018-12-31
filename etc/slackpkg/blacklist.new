@@ -1,13 +1,12 @@
 # This is a blacklist file. Any packages listed here won't be
-# upgraded, removed or installed by slackpkg.
+# upgraded, removed, or installed by slackpkg.
 #
 # The correct syntax is:
 #
 # to blacklist the package xfree86-devel-4.3.0-i386-1 the line will be:
 # xfree86-devel
 #
-# Please, DON'T put any blank line(s) or any space(s) before or 
-# after the package name.
+# DON'T put any blank line(s) or any space(s) before or after the package name.
 # If you do this, the blacklist will NOT work.
 #
 # Automated upgrade of kernel packages aren't a good idea (and you need to

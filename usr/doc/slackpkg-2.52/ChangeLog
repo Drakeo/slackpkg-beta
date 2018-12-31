@@ -1,6 +1,13 @@
 ChangeLog
 ---------
 
+2007 Mon Mar 12 
+---------------
+	- Changing NOGPG to CHECKGPG. Is more coherent with the other
+	  options. Thanks Robby to point that.
+	- Many update and grammar fixes in documentation.
+		(Thanks again Robby Workman!)
+
 2007 Mon Jan 05
 ---------------
 	- Fix many errors in "install-new". It didn't found any

@@ -150,12 +150,12 @@ Without awk, slackpkg doesn't work in any way.\n"
 
 	# Check if gpg is enabled but no GPG command are found.
 	#
-	if ! [ "$(which gpg 2>/dev/null)" ] && [ "${NOGPG}" = "off" ]; then
-		NOGPG=on
+	if ! [ "$(which gpg 2>/dev/null)" ] && [ "${CHECKGPG}" = "on" ]; then
+		CHECKGPG=off
 		echo -e "\n\
 No gpg found!!! Please, disable GPG in ${CONF}/slackpkg.conf or install\n\
 the gnupg package.\n\n\
-To disable GPG, edit slackpkg.conf and add one line with NOGPG=on.\n\
+To disable GPG, edit slackpkg.conf and add one line with CHECKGPG=off.\n\
 You can see an example in slackpkg.conf.new.\n "
 		sleep 5
 	fi 
@@ -165,13 +165,13 @@ You can see an example in slackpkg.conf.new.\n "
 	GPGFIRSTTIME="`gpg --list-keys \"$SLACKKEY\" 2>/dev/null \
 			| grep -c \"$SLACKKEY\"`"
 	if [ "$GPGFIRSTTIME" = "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ] && \
-			[ "$CMD" != "update" ] && [ "$NOGPG" != "on" ]; then
+			[ "$CMD" != "update" ] && [ "$CHECKGPG" = "on" ]; then
 		echo -e "\n\
 You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
 \t# slackpkg update gpg\n\n\
 You can disable GPG checking, too. But it isn't a good idea.\n\
-To disable GPG, edit slackpkg.conf and add one line with NOGPG=on.\n\
+To disable GPG, edit slackpkg.conf and add one line with CHECKGPG=off.\n\
 You can see an example in slackpkg.conf.new.\n"
 		cleanup
 	fi
@@ -470,13 +470,13 @@ function getpkg() {
 		if [ "${LOCAL}" = "1" ]; then 
                 	echo -e "\tCopying $1..."
 			cp ${SOURCE}${FULLPATH}/${NAMEPKG} ${TEMP}
-			if [ "$NOGPG" != "on" ]; then
+			if [ "$CHECKGPG" = "on" ]; then
 				cp ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${TEMP}
 			fi
 		else
                 	echo -e "\tDownloading $1..."
 			wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
-			if [ "$NOGPG" != "on" ]; then
+			if [ "$CHECKGPG" = "on" ]; then
 				wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
 			fi
 		fi
@@ -495,7 +495,7 @@ function getpkg() {
 	# Check the package against its .asc. If you don't like this
 	# disable GPG checking in /etc/slackpkg/slackpkg.conf
 	#
-	if [ "$NOGPG" != "on" ]; then
+	if [ "$CHECKGPG" = "on" ]; then
 		ISOK=`checkgpg $1`
 		[ "$ISOK" = "0" ] && ERROR="gpg"
 	fi

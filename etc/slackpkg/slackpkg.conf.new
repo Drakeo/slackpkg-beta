@@ -21,23 +21,28 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
-# Project Page: http://slackpkg.sf.net/
+# Project Page: http://slackpkg.org/
 # Roberto F. Batista (aka PiterPunk) piterpk@terra.com.br
 # Evaldo Gardenali (aka UdontKnow) evaldogardenali@fasternet.com.br
 #
 
+# For configuration options that have only two states, possible values are
+# either "on" or "off"
+
+# Remember, the only official Slackware ports are x86 and s390, and
+# slackpkg developers don't have s390 boxes for testing.  If you are
+# testing/using in other archs and have suggestions or patches, 
+# please let me know (piterpk@terra.com.br)
+#
 # Select the architecture of your system
-# x86 (the main arch for slackware)
+# x86 (the main arch for Slackware)
 ARCH=i[3456]86
-# x86_64 (slamd64 and BlueWhite64)
+# x86_64 (Slamd64 and BlueWhite64)
 #ARCH=x86_64 
-# PowerPC (slackintosh)
+# PowerPC (Slackintosh)
 #ARCH=powerpc
-# S/390 (slack/390)
+# S/390 (Slack/390)
 #ARCH=s390
-# Only to remember, the slackware official ports are only x86 and s390 and
-# i don't have one s390 to test. If you test in other archs and have
-# suggestions or patches, let me know (piterpk@terra.com.br)
 
 # Downloaded files will be in directory below:
 TEMP=/var/cache/packages
@@ -55,12 +60,12 @@ DELALL=on
 # install/upgrade/reinstall is performed.
 CHECKPKG=on
 
-# If NOGPG is "off", the system will verify the GPG signature of each package
+# If CHECKGPG is "on", the system will verify the GPG signature of each package
 # before install/upgrade/reinstall is performed.
-NOGPG=off
+CHECKGPG=on
 
-# The lines below will set the download priority. By default, patches dir
-# will have the max priority, and the pasture will have the lowest.
+# The lines below will set the download priority. 
+# Default values: /patches /slackware /extra /pasture /testing
 FIRST=patches
 SECOND=slackware
 THIRD=extra
@@ -69,32 +74,30 @@ FIFTH=testing
 
 # The default MAIN is "slackware", but some derived distros uses other
 # names as the main directory. Of course, MAIN needs to be listed in
-# the download priority directories -;)
+# the download priority directories
 MAIN=slackware
 
-# The POSTINST variable, activate the slackpkg's post-install features, 
-# like check .new configuration files and verify if your kernel is new. 
-# If you don't like this feature, change the POSTINST=on to POSTINST=off
+# Enables (on) or disables (off) slackpkg's post-installation features, such
+# as checking for new (*.new) configuration files and new kernel images, and
+# prompts you for what it should do.  Default=on
 POSTINST=on
 
-# The ONOFF variable is a default behavior of dialog interface. If you
-# set this to 'on' then all packages will be selected by default. If you
-# prefer opposite option (all unchecked), set this to off.
-# Default=on
+# The ONOFF variable sets the initial behavior of the dialog interface.
+# If you set this to "on" then all packages will be selected by default.
+# If you prefer the opposite option (all unchecked), then set this to "off".
 ONOFF=on
 
-# If DOWNLOAD_ALL is "on", all files will be downloaded and after that, the
-# operation (install or upgrade) will be performed. If you had a limited
-# time to be online, maybe it's a good idea; but you need a lot of disk
-# space. If DOWNLOAD_ALL is set to "off", the files will be downloaded 
-# and operation (install or upgrade) will be performed one-by-one. This
-# is the default and traditional slackpkg behavior
+# If this variable is set to "on", all files will be downloaded before the
+# requested operation (install or upgrade) is performed.   If set to "off",
+# then the files will be downloaded and the operation (install/upgrade)
+# performed one by one.  Default=off
 DOWNLOAD_ALL=off
 
-# Enables "on" and disables "off" the dialog interface in slackpkg
+# Enables (on) or disables (off) the dialog interface in slackpkg.  Default=on
 DIALOG=on
 
 #
-# The MIRROR is set from mirrors's file. You only need uncomment the selected
-# mirror. Uncomment one mirror only.
+# The MIRROR is set from /etc/slackpkg/mirrors
+# You only need to uncomment the selected mirror. 
+# Uncomment one mirror only.
 #

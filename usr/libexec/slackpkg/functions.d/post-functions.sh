@@ -26,7 +26,7 @@ removeold() {
 }
 
 looknew() {
-	echo -e "\nSearching NEW configuration files"
+	echo -e "\nSearching for NEW configuration files"
 	FILES=`find /etc -name "*.new" -not -name "rc.inet1.conf.new" \
 		-not -name "group.new" -not -name "passwd.new" \
 		-not -name "shadow.new" -not -name "gshadow.new" 2>/dev/null`
@@ -102,7 +102,7 @@ lookkernel() {
 	NEWKERNELMD5=`md5sum /boot/vmlinuz 2>/dev/null`
 	if [ "$KERNELMD5" != "$NEWKERNELMD5" ]; then
 		echo -e "\n
-Your kernel image is updated. We highly recommend you run: lilo
+Your kernel image was updated.  We highly recommend you run: lilo
 Do you want slackpkg to run lilo now? (Y/n)"
 		read ANSWER
 		if [ "$ANSWER" != "n" ] && [ "$ANSWER" != "N" ]; then
