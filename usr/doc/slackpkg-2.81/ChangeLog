@@ -1,6 +1,13 @@
 ChangeLog
 ---------
 
+2010 Tue Apr 20
+---------------
+	- Unified download code. Function getfile is the only place
+	  with download instructions and getpkg uses it.
+	- Added DOWNLOADER variable. You can choose between "curl" and "wget" 
+	  downloaders.
+
 2010 Mon Apr 19
 ---------------
 	- Now we can, before install or upgrade a package, verify

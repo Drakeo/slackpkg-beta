@@ -59,6 +59,8 @@ spinning() {
 function system_setup() {
 
 	# Set LOCAL if mirror isn't through network 
+	# If mirror is through network, select the command to fetch
+	# files and packages from there.
 	#
 	MEDIA=${SOURCE%%:*}
 	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
@@ -67,6 +69,11 @@ function system_setup() {
 		LOCAL=1
 	else
 		LOCAL=0
+		if [ "$DOWNLOADER" = "curl" ]; then
+			DOWNLOADER="curl ${CURLFLAGS} -o"
+		else
+                	DOWNLOADER="wget ${WGETFLAGS} -O"
+		fi
 	fi
 
 	# Set MORECMD, EDITCMD and check BATCH mode 
@@ -817,14 +824,14 @@ function showlist() {
 function getfile() {
         if [ "$LOCAL" = "1" ]; then
                 echo -e "\t\t\tLinking $1..."
-                if [ -e ${SOURCE}$1 ]; then
-			ln -s ${SOURCE}$1 $2 2>/dev/null
+                if [ -e $1 ]; then
+			ln -s $1 $2 2>/dev/null
 		else
 			return 1
 		fi
         else
                 echo -e "\t\t\tDownloading $1..."
-                wget ${WGETFLAGS} ${SOURCE}$1 -O $2
+		$DOWNLOADER $2 $1
         fi
 }                                                       
 
@@ -854,20 +861,11 @@ function getpkg() {
 		# to CACHEPATH else, download packages from remote host and 
 		# put then in CACHEPATH
 		#
-		if [ "${LOCAL}" = "1" ]; then 
-                	echo -e "\tLinking $NAMEPKG..."
-			[ -e ${SOURCE}${FULLPATH}/${NAMEPKG} ] && \
-			ln -s ${SOURCE}${FULLPATH}/${NAMEPKG} ${CACHEPATH}
-			if [ "$CHECKGPG" = "on" ]; then
-				[ -e ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ] && \
-				ln -s ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${CACHEPATH}
-			fi
-		else
-                	echo -e "\tDownloading $NAMEPKG..."
-			wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
-			if [ "$CHECKGPG" = "on" ]; then
-				wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
-			fi
+		getfile ${SOURCE}${FULLPATH}/${NAMEPKG} \
+			${CACHEPATH}/${NAMEPKG} 
+		if [ "$CHECKGPG" = "on" ]; then
+			getfile ${SOURCE}${FULLPATH}/${NAMEPKG}.asc \
+				${CACHEPATH}/${NAMEPKG}.asc
 		fi
 
 		if ! [ -e ${CACHEPATH}/$1 ]; then
@@ -957,7 +955,7 @@ function checkchangelog()
 	# Download ChangeLog.txt first of all and test if it's equal
 	# or different from our already existent ChangeLog.txt 
 	#
-	getfile ChangeLog.txt $TMPDIR/ChangeLog.txt
+	getfile ${SOURCE}ChangeLog.txt $TMPDIR/ChangeLog.txt
 	if ! grep -q "[a-z]" $TMPDIR/ChangeLog.txt ; then
 		echo -e "\
 \nError downloading from $SOURCE.\n\
@@ -994,14 +992,14 @@ function updatefilelists()
 	#
 	echo -e "\t\tList of all files"
 	for i in ${PRIORITY[@]} ; do 
-		getfile ${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
+		getfile ${SOURCE}${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
 			DIRS="$DIRS $i"
 	done
 
 	ISOK="1"
 	echo -e "\t\tChecksums"
-	getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
-	getfile CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
+	getfile ${SOURCE}CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
+	getfile ${SOURCE}CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
 	if ! [ -e "${TMPDIR}/CHECKSUMS.md5" ]; then
 		echo -e "\
 \n\t\tWARNING: Your mirror appears incomplete and is missing the\n\
@@ -1034,7 +1032,7 @@ function updatefilelists()
 
 	ISOK="1"
 	echo -e "\t\tPackage List"
-	getfile FILELIST.TXT ${TMPDIR}/FILELIST.TXT
+	getfile ${SOURCE}FILELIST.TXT ${TMPDIR}/FILELIST.TXT
 	if [ "$CHECKMD5" = "on" ]; then
 		CHECKSUMSFILE=${TMPDIR}/CHECKSUMS.md5
 		ISOK=$(checkmd5 ${TMPDIR}/FILELIST.TXT)
@@ -1084,7 +1082,7 @@ function updatefilelists()
 	# 
 	echo -e "\t\tPackage descriptions"
 	for i in $DIRS; do
-		getfile ${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
+		getfile ${SOURCE}${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
 	done
 
 	# Format FILELIST.TXT
