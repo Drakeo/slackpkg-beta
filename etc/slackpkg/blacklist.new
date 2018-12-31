@@ -3,8 +3,8 @@
 #
 # The correct syntax is:
 #
-# To blacklist the package xfree86-devel-4.3.0-i386-1 the line will be:
-# xfree86-devel
+# To blacklist the package xorg-server-1.6.3-x86_64-1 the line will be:
+# xorg-server
 #
 # DON'T put any blank line(s) or any space(s) before or after the package name.
 # If you do this, the blacklist will NOT work.
@@ -13,10 +13,15 @@
 # run "lilo" after upgrade). If you think the same, uncomment the lines
 # below 
 #
-#kernel-ide
-#kernel-modules
-#kernel-source
+#kernel-firmware
+#kernel-generic
+#kernel-generic-smp
 #kernel-headers
+#kernel-huge
+#kernel-huge-smp
+#kernel-modules
+#kernel-modules-smp
+#kernel-source
 
 #
 # aaa_elflibs can't be updated.
@@ -25,7 +30,7 @@ aaa_elflibs
 
 #
 # Now we can blacklist whole directories
-# The two versions of udev inside that dir conflicts with
-# Slackware 11.0's default udev (in /slackware).
-/extra/udev-alternate-versions
+# The versions of xf86-video-intel inside that dir conflicts with
+# Slackware 13.0's default xf86-video-intel (in /slackware).
+/extra/xf86-video-intel-alternate
 

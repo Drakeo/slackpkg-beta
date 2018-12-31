@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Project Page: http://slackpkg.org/
-# Roberto F. Batista (aka PiterPunk) piterpk@terra.com.br
+# Roberto F. Batista (aka PiterPunk) piterpunk@slackware.com
 # Evaldo Gardenali (aka UdontKnow) evaldogardenali@fasternet.com.br
 #
 
@@ -32,18 +32,18 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.80
+VERSION=2.81.1
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 CONF=/etc/slackpkg
-SOURCE=$(grep -e "^\([a-z]\)" $CONF/mirrors)
+SOURCE=$(sed -e 's/^[[:blank:]]*//' $CONF/mirrors | grep -m1 -e "^\([a-z]\)")
 . $CONF/slackpkg.conf
 ERROR=""
 
 # Set temporary directory
 #
-TMPDIR=$(mktemp -p /tmp -d slackpkg.XXXXXX 2>/dev/null || echo "FAILED")
-if [ "$TMPDIR" = "FAILED" ]; then
+TMPDIR=$(mktemp -p /tmp -d slackpkg.XXXXXX 2>/dev/null)
+if [ $? -ne 0 ]; then
 	TMPDIR="/tmp/slackpkg.${RANDOM}"
 	mkdir -m 700 $TMPDIR || TMPDIR="FAILED"
 fi
@@ -87,6 +87,14 @@ while [ -n "$1" ] ; do
       CHECKGPG=off
       shift
     ;;
+    -checksize=on)
+      CHECKSIZE=on
+      shift
+    ;;
+    -checksize=off)
+      CHECKSIZE=off
+      shift
+    ;;
     -postinst=on)
       POSTINST=on
       shift
@@ -117,6 +125,10 @@ while [ -n "$1" ] ; do
     ;;
     -dialog=off)
       DIALOG=off
+      shift
+    ;;
+    -dialog_maxargs=*)
+      DIALOG_MAXARGS=$(echo $1 | cut -f2 -d=)
       shift
     ;;
     -batch=on)
@@ -160,10 +172,10 @@ while [ -n "$1" ] ; do
       shift
     ;;
     -mirror=*)
-	SOURCE=$(echo $1 | cut -f2 -d=)
-	shift
+      SOURCE=$(echo $1 | cut -f2 -d=)
+      shift
     ;; 
-    install|reinstall|upgrade|remove|search|blacklist|download|info)
+    install|reinstall|upgrade|remove|blacklist|download)
       CMD=$1
       shift
       if [ -n "$1" ]; then
@@ -195,15 +207,15 @@ while [ -n "$1" ] ; do
         shift
       fi
     ;;
-    install-new|upgrade-all|clean-system|new-config|check-updates)
+    install-new|upgrade-all|clean-system|new-config|check-updates|help)
       CMD=$1
       shift
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments."
+	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
         shift $#
       fi
     ;;
-    generate-template|install-template|remove-template)
+    generate-template|install-template|remove-template|search|file-search|info)
       CMD=$1
       shift
       if [ -n "$1" ]; then 
@@ -214,7 +226,7 @@ while [ -n "$1" ] ; do
       fi
 
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments."
+	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
         shift $#
       fi
     ;;
@@ -248,7 +260,7 @@ system_checkup
 #
 # Remember - the new function scripts need to be executable
 #
-for i in /usr/libexec/slackpkg/functions.d/*; do
+for i in /usr/libexec/slackpkg/functions.d/*.sh; do
 	if [ -x $i ]; then
 		. $i
 	fi
@@ -263,14 +275,17 @@ done
 # A *BIG* case with all slackpkg commands -:)
 #
 case "$CMD" in
-	"check-updates")
+	help)
+		full_usage
+		;;
+	check-updates)
 		if checkchangelog 1>/dev/null 2>/dev/null ; then
 			echo "No news is good news"
 		else
 			echo "News on ChangeLog.txt"
 		fi
 		;;
-	"update")
+	update)
 		# If you are using "slackpkg update gpg" OR the system
 		# doesn't have Slackware GPG key, download and install
 		# the key
@@ -283,7 +298,7 @@ case "$CMD" in
 			if ! [ -e ~/.gnupg ]; then
 				mkdir ~/.gnupg
 			fi
-			getfile /GPG-KEY $TMPDIR/gpgkey 
+			getfile ${SOURCE}GPG-KEY $TMPDIR/gpgkey 
 			gpg --yes --batch --delete-key "$SLACKKEY" &>/dev/null
 			gpg --import $TMPDIR/gpgkey &>/dev/null && \
 			echo -e "\t\t\tSlackware Linux Project's GPG key added"
@@ -294,7 +309,7 @@ case "$CMD" in
 		echo "Updating the package lists..."
 		updatefilelists
 	;;
-	"install")
+	install)
 		makelist $INPUTLIST
 		if [ -n "$LIST" ]; then
 			showlist "$LIST" $CMD
@@ -305,7 +320,7 @@ case "$CMD" in
 			POSTINST=off
 		fi
 	;;
-	"reinstall")
+	reinstall)
 		makelist $INPUTLIST
 		if [ -n "$LIST" ]; then
 			showlist "$LIST" $CMD
@@ -316,7 +331,7 @@ case "$CMD" in
 			POSTINST=off
 		fi
 	;;
-	"upgrade")
+	upgrade)
 		sanity_check
 		makelist $INPUTLIST
 		if [ -n "$LIST" ]; then
@@ -328,7 +343,7 @@ case "$CMD" in
 			POSTINST=off
 		fi
 	;;
-	"download")
+	download)
 		makelist $INPUTLIST
 		DELALL="off"
 		if ! [ "$LIST" = "" ]; then
@@ -341,7 +356,7 @@ case "$CMD" in
 			POSTINST=off
 		fi
 	;;
-	"remove")
+	remove)
 		makelist $INPUTLIST
 		if [ "$LIST" = "" ]; then
 			echo -e "The file(s) $INPUTLIST can't be removed - package not installed.\n"
@@ -350,7 +365,7 @@ case "$CMD" in
 		showlist "$LIST" $CMD
 		remove_pkg
 	;;
-	"clean-system")
+	clean-system)
 		makelist $INPUTLIST
 		if [ -n "$LIST" ]; then
 			showlist "$LIST" remove 
@@ -360,7 +375,7 @@ case "$CMD" in
 			POSTINST=off
 		fi
 	;;
-	"upgrade-all")
+	upgrade-all)
 		sanity_check
 		makelist $INPUTLIST
 		if ! [ -n "${LIST}" ]; then	
@@ -387,7 +402,7 @@ case "$CMD" in
 			upgrade_pkg
 		fi
 	;;
-	"install-new")
+	install-new)
 		makelist ${INPUTLIST}
 		if ! [ -n "${LIST}" ]; then	
 			echo -e "No packages match the pattern for install. Try:"
@@ -398,16 +413,16 @@ case "$CMD" in
 			install_pkg
 		fi
 	;;
-	"blacklist")
+	blacklist)
 		#
 		# If blacklist is called without package name, list
 		# all blacklisted packages
 		if [ "$INPUTLIST" = "" ]; then
 			echo -e "Packages in blacklist:\n"
-			grep -e "^\([a-z]\)" $CONF/blacklist | more
+			grep -e "^\([a-z]\)" $CONF/blacklist | $MORECMD
 			cleanup
 		fi
-		
+
 		makelist ${INPUTLIST}
 		for i in $LIST; do
 			BASENAME=$(cutpkg $i)
@@ -420,71 +435,37 @@ case "$CMD" in
 		else
 			showlist "$BLACKLIST" $CMD
 		fi
-		
+
 		blacklist_pkg
 	;;
-	"search")
-		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g'`
-		# Search filelist.gz for possible matches
-		for i in ${PRIORITY[@]}; do
-			if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
-				PKGS="$(zegrep $PATTERN ${WORKDIR}/${i}-filelist.gz | \
-					cut -d\  -f 1 | awk -F'/' '{print $NF}')"
-				for j in $PKGS ; do
-					NEWONE=`cutpkg ${j}`
-					echo $PACKAGES | \
-						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+" && \
-						continue
-					PACKAGES="$PACKAGES $j"
-				done
-			fi
-		done
+	file-search)
+		PATTERN=$(echo $ARG | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g')
+		makelist $PATTERN
 
-		if [ "$PACKAGES" = "" ]; then
-		    echo "No package contains the selected pattern."
+		if [ "$LIST" = "" ]; then
+			echo -e "No packages contains \"$PATTERN\" file."
 		else
-		    echo -e "\
-The list below shows all packages with the selected pattern.\n"
-		    for i in $PACKAGES; do
-			if [ "$BASENAME" = "$(cutpkg ${i})" ]; then
-				continue
-			fi
-			# BASENAME is base package name 
-			BASENAME="$(cutpkg ${i})"
-
-			# RAWNAME is Latest available version  
-			RAWNAME="${i/%.t[blxg]z/}"
-
-			# Default is uninstalled
-			STATUS="uninstalled"
-
-			# First is the package already installed?
-			# Amazing what a little sleep will do
-			# exclusion is so much nicer :)
-			INSTPKG=$(ls -1 /var/log/packages | \
-				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+")
-
-			    # INSTPKG is local version
-			    if [ ! "${INSTPKG}" = "" ]; then
-
-				# If installed is it uptodate?
-				if [ "${INSTPKG}" = "${RAWNAME}" ]; then
-				    STATUS=" installed "
-			    	    echo "[${STATUS}] - ${INSTPKG}"
-				else
-				    STATUS="  upgrade  "
-				echo "[${STATUS}] - ${INSTPKG} --> ${RAWNAME}"
-				fi
-			    else
-				    echo "[${STATUS}] - ${RAWNAME}"
-			    fi
-		    done
-		fi
+			echo -e "The list below shows the packages that contains \"$PATTERN\" file.\n"
+			searchlist "$LIST" 
+			echo -e "\nYou can search specific packages using \"slackpkg search package\".\n"	
+	    	fi
 	;;
-	"info")
-		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`
+	search)
+		PATTERN=$(echo $ARG | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g')
+		makelist $PATTERN
+
+		if [ "$LIST" = "" ]; then
+			echo -e "No package name matches the pattern."
+		else
+			echo -e "The list below shows all packages with name matching \"$PATTERN\".\n"
+			searchlist "$LIST"
+			echo -e "\nYou can search specific files using \"slackpkg file-search file\".\n"	
+	    	fi
+	;;
+	info)
+		PATTERN=$(echo $ARG | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g')
 		NAME=$(cutpkg $PATTERN)
-		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[[:digit:]]+/,/^$/ {
+		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[^-]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
 				 print \$PATTERN 
@@ -570,7 +551,7 @@ esac
 # That options don't change configurations files and, if 
 # someone remove the kernel, i hope he knows what is doing.
 #
-for i in check-updates remove search update blacklist info \
+for i in check-updates remove search file-search update blacklist info \
 	 clean-system download generate-template remove-template; do
 	if [ "$CMD" = "$i" ]; then
 		POSTINST=off

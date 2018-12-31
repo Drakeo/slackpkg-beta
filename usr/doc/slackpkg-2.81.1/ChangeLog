@@ -1,6 +1,182 @@
 ChangeLog
 ---------
 
+2010 Sat May 01
+---------------
+	- Use $TMPDIR/pkglist instead $WORKDIR/tmplist on many places.
+	  This avoids problems when slackpkg does self-upgrade.
+	- Change CHECKSIZE default to "off"
+	- Fix CHECKSIZE to only check mountpoints. This avoids problems when
+	  the system have networked or DVD/CDs mounted
+					(Thanks alienbob and vbatts)
+	- Change version number to 2.81.1
+	- Released as 2.81.1beta1. Happy Workers Day!
+
+2010 Wed Apr 28
+---------------
+	- Fix blacklist checking on 'slackpkg clean-system'. It was
+	  checking if the package is blacklisted but didn't use this
+	  information.
+					(Reported by Greg and Shuren)
+	- Change 2.81 release date on ChangeLog and README to 2010 *Fri* 
+	  Apr 23, not 2010 *Thu* Apr 23.
+					(Thanks gui_ap)
+
+2010 Fri Apr 23
+---------------
+	- Fixed some typos in 'slackpkg help'
+	- Fixed 'update gpg' to use the unified getfile function
+	- Released as 2.81
+
+2010 Tue Apr 20
+---------------
+	- Unified download code. Function getfile is the only place
+	  with download instructions and getpkg uses it.
+	- Added DOWNLOADER variable. You can choose between "curl" and "wget" 
+	  downloaders.
+
+2010 Mon Apr 19
+---------------
+	- Now we can, before install or upgrade a package, verify
+	  if the system have enough available space in its filesystems.
+	  This can slowdown the upgrade/install process but can save a lot
+	  of problems.
+		. Added CHECKSIZE on slackpkg.conf
+		. Added CHECKSIZE on slackpkg.conf manpage
+		. Added -checksize on usr/sbin/slackpkg
+		. Added havespace and checksize functions on core-functions.sh
+	- Released as slackpkg-2.81beta2
+
+2010 Sun Apr 18
+---------------
+	- Added DIALOG_MAXARGS variable. This is to set the max number of
+	  characters that dialog can handle. If DIALOG_MAXARGS is unset we
+	  use the traditional 19500 characters. Removing hints when
+	  we reach DIALOG_MAXARGS *ISN'T A BUG* is a *FIX*. Without that,
+	  upgrade from slackware-X to slackware-X+1 will be impossible.
+		. Added DIALOG_MAXARGS on slackpkg.conf
+		. Added DIALOG_MAXARGS on slackpkg.conf manpage
+		. Added -dialog_maxargs on usr/sbin/slackpkg
+ 
+2010 Tue Feb 16
+---------------
+	- Fix x86 32bits regexp to not catch x86_64 packages
+	- Applied more patches from Grissiom:
+		. uniq in listpkgname function
+		. tell the user the ignored arguments
+		. respect only .sh functions on functions.d
+	- Split mirrors file by architecture. doinst.sh copy the
+	  right file to right place.
+	- Change references to <piterpk@terra.com.br> to 
+	  <piterpunk@slackware.com>
+
+2009 Sat Dec 12
+---------------
+	- Fix link problem with non-existent files
+	- Fix pkglist.awk to be compatible with new awk
+					(reported by rworkman)
+	- Now users can run "help" function
+	- Update man-pages with file-search, help and search
+	- Applied a lot of patches from Grissiom:
+		. Change mktemp creation test to be more "standard"
+		. Use parameter expansion instead "echo STRING | cut" in
+		  some places
+		. Use MORECMD to show blacklist if needed
+		. Change all `command` to $(command)
+		. Check if lilo is installed before trying to run it
+		. Some minor formating changes
+	- Other minor formating changes
+	- Update version on many places to 2.81
+
+2009 Tue Nov 24
+---------------
+	- Move search code from /sbin/slackpkg to core-functions.sh
+	- Use spinning bar on search and file-search
+	- Move existing "search" function to "file-search" and create a
+	  new "search", that looks for package's name
+	- Update usage and full_usage to reflect "search" and "file-search"
+	  changes
+	- Update a lot of system checks to take care of file-search.
+
+2009 Mon Nov 23
+---------------
+	- Add listpkgname function to create spkg, lpkg and dpkg files
+	- Change upgrade-all to use listpkgname function
+	- Enhance clean-system performance using listpkgname function
+	  to list packages
+	- Put comments on some functions to be more useful
+	- Change usage function to show only the slackpkg's syntax
+	  Old usage is now "slackpkg help", with a short description
+	  of each slackpkg command.
+
+2009 Sun Nov 22
+---------------
+	- Applied patch to link local files instead copying
+	  The old way was really stupid, why copy a file that
+	  already is there?
+					(Thanks Grissiom)
+	- Changed the way that slackpkg make the upgrade-all list
+	  Now the list is created very faster than before
+	  				(Thanks Grissiom)
+	- Added spinning bar to sanity-check function
+	  Good to give some feedback to user
+	- Move awk code from cutpkg function to cutpkg.awk
+	  Now we have cutpkg function, to handle a single package name
+	  and batchcutpkg to read many package names from stdin
+	  This speed sanity-check function
+	- Deactivate spinning bar when tput command is not found
+	- Force cursor back to normal mode in cleanup function
+					(Thanks NaCl)
+
+2009 Thu Jul 30
+---------------
+	- Change version number in manpages
+	- Released as 2.80.2
+
+2009 Mon Jul 27
+---------------
+	- Bumped version number to 2.80.2
+
+2009 Sun Jul 26
+---------------
+	- Changed [[:digit:]] references to [^-] in usr/sbin/slackpkg
+	  that makes some packages don't be found by slackpkg.
+					(Thanks Niels Horn and Grissiom)
+	- Removing leading spaces or tabs in mirrors file.
+	 				(Thanks Luke, Max, Cezar Rangel and
+					 other guys on slack-users-br list)
+	- Fix slackpkg.conf comments about BATCH mode. 
+					(Thanks Bruce Hill and AlienBob)
+	- Fix Indonesian mirrors.
+					(Thanks Willy Sudiarto Raharjo)
+	- Fix some Polish mirrors.
+					(Thanks Dexen deVries)
+	- Fix some UK mirrors.
+					(Thanks Andrew Fielder)
+	
+2009 Tue Jul 14
+---------------
+	- Added ARMedslack mirrors
+					(Thanks MoZes)
+	- Fix in generate-template to honor USE_INCLUDES option
+	- Released as 2.80.1
+
+2009 Wed Jul 08
+---------------
+	- Updated the Slackpkg's mirrors file.
+					(Thanks DagMoller)
+
+2009 Thu Jun 18
+---------------
+	- Merged some patches from Daniel Levai to enhance the config
+	  merge options.
+	- Released as 2.80
+
+2009 Thu Jun 11
+---------------
+	- Fixed a circular check: new-config needs update and update
+	  needs new-config.
+
 2009 Sun Jun 07
 ---------------
 	- Change in doinst.sh to remove old pkglist at slackpkg's

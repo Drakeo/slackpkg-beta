@@ -1,7 +1,7 @@
    slackpkg - Automated Tool for Management of Slackware Linux Packages
    ---------------------------------------------------------------------
    			Authors: Piter PUNK aka Roberto F Batista 
-				 	<piterpk@terra.com.br>
+				 	<piterpunk@slackware.com>
 				 Evaldo Gardenali aka UdontKnow 
 					<evaldo@fasternet.com.br>
 
@@ -48,6 +48,10 @@
 				 2.70.5 released at Thu Dec 04 2008 
 				 2.71	released at Thu Apr 23 2009 
 				 2.71.1 released at Sat May 02 2009
+				 2.80	released at Thu Jun 18 2009
+				 2.80.1 released at Tue Jul 14 2009
+				 2.80.2 released at Thu Jul 30 2009
+				 2.81   released at Fri Apr 23 2010
 
   Slackpkg is a tool for those who want to easily install or upgrade packages 
   via the network.  With slackpkg, you can have a minimal installation of 

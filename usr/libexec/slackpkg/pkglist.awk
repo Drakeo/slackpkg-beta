@@ -17,7 +17,8 @@
 		if ( NF > 3 ) {
 			SIZE=split($NF,RELEXT,".")
 			EXTENSION=RELEXT[SIZE]
-			RELEASE=sprintf("%." length($NF)-4 "s", $NF)
+			LAST=length($NF)-4
+			RELEASE=substr($NF,1,LAST)
 			ARCH=$(NF-1)
 			VERSION=$(NF-2)
 			NF=NF-3

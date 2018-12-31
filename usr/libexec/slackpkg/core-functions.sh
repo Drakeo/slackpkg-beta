@@ -1,3 +1,4 @@
+
 #========================================================================
 #
 # PROGRAM FUNCTIONS
@@ -6,6 +7,7 @@
 # Clean-up tmp and lock files
 #
 function cleanup() {
+	[ "$SPINNING" = "off" ] || tput cnorm
 	if [ -e $TMPDIR/error.log ]; then
 	        echo -e "         
 \n==============================================================================
@@ -57,22 +59,30 @@ spinning() {
 function system_setup() {
 
 	# Set LOCAL if mirror isn't through network 
+	# If mirror is through network, select the command to fetch
+	# files and packages from there.
 	#
-	MEDIA=$(echo ${SOURCE} | cut -f1 -d:)
+	MEDIA=${SOURCE%%:*}
 	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
 	   [ "$MEDIA" = "local" ]; then
-		SOURCE=/$(echo ${SOURCE} | cut -f3- -d/)
+		SOURCE=/${SOURCE#${MEDIA}://}
 		LOCAL=1
 	else
 		LOCAL=0
+		if [ "$DOWNLOADER" = "curl" ]; then
+			DOWNLOADER="curl ${CURLFLAGS} -o"
+		else
+                	DOWNLOADER="wget ${WGETFLAGS} -O"
+		fi
 	fi
-	
-	# Set MORECMD and check BATCH mode 
+
+	# Set MORECMD, EDITCMD and check BATCH mode 
 	#
 	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
 		DIALOG=off
 		SPINNING=off
 		MORECMD=cat
+		EDITCMD=vi
 		if [ "$DEFAULT_ANSWER" = "" ]; then
 			DEFAULT_ANSWER=n
 		fi
@@ -81,6 +91,11 @@ function system_setup() {
 			MORECMD="${PAGER}"
 		else
 			MORECMD=more
+		fi
+		if [ "${EDITOR}" ]; then	
+			EDITCMD="${EDITOR}"
+		else
+			EDITCMD=vi
 		fi
 	fi
 
@@ -91,7 +106,7 @@ function system_setup() {
 	fi
 	case $ARCH in
 		i386|i486|i586|i686)
-			ARCH=[i]*[3456x]86
+			ARCH=[i]*[3456x]86[^_]*
 			SLACKKEY=${SLACKKEY:-"Slackware Linux Project <security@slackware.com>"}
 			PKGMAIN=${PKGMAIN:-slackware}
 		;;
@@ -138,6 +153,7 @@ function system_setup() {
 	SLACKCFVERSION=$(grep "# v[0-9.]\+" $CONF/slackpkg.conf | cut -f2 -dv)
 	CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
 	KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
+	DIALOG_MAXARGS=${DIALOG_MAXARGS:-19500}
 	echo "$0 $VERSION - Slackware Linux $SLACKWARE_VERSION" > $TMPDIR/timestamp
 }
 
@@ -182,7 +198,9 @@ In ${CONF}/slackpkg.conf.new, there is a sample of the new configuration.\n\
 	# Checking if another instance of slackpkg is running
 	#
 	if [ "$(ls /var/lock/slackpkg.* 2>/dev/null)" ] && \
-		[ "$CMD" != "search" ]; then
+		[ "$CMD" != "search" ] && \
+		[ "$CMD" != "help" ] && \
+		[ "$CMD" != "file-search" ]; then
 		echo -e "\
 \nAnother instance of slackpkg is running. If this is not correct, you can\n\
 remove /var/lock/slackpkg.* files and run slackpkg again.\n"
@@ -213,13 +231,14 @@ Before you install|upgrade|reinstall anything, you need to uncomment\n\
 ONE mirror in ${CONF}/mirrors and run:\n\n\
 \t# slackpkg update\n\n\
 You can see more information about slackpkg functions in slackpkg manpage."
-		else
+			cleanup
+		elif [ "$CMD" != "new-config" ]; then
 			echo -e "\
 \nThe package list is missing.\n\
 Before you install|upgrade|reinstall anything you need to run:\n\n\
 \t# slackpkg update\n"
+			cleanup
 		fi
-		cleanup
 	fi                                                      
 
 
@@ -257,6 +276,7 @@ official mirrors can be kept up-to-date.\n"
 	#                                                                    
 	if [ "$(id -u)" != "0" ] && \
 	   [ "$CMD" != "search" ] && \
+	   [ "$CMD" != "file-search" ] && \
 	   [ "$CMD" != "check-updates" ] && \
 	   [ "$CMD" != "info" ]; then
 		echo -e "\n\
@@ -297,6 +317,12 @@ as slackpkg cannot function without awk.\n"
 		cleanup
 	fi
 
+	# Check if tput is there
+	#
+	if ! which tput 1>/dev/null 2>/dev/null ; then
+		SPINNING=off
+	fi
+
 	# Check if gpg is enabled but no GPG command are found.
 	#
 	if ! [ "$(which gpg 2>/dev/null)" ] && [ "${CHECKGPG}" = "on" ]; then
@@ -316,6 +342,7 @@ file distributed with slackpkg.\n"
 			| grep -c "$SLACKKEY")"
 	if [ "$GPGFIRSTTIME" = "0" ] && \
 		[ "$CMD" != "search" ] && \
+		[ "$CMD" != "file-search" ] && \
 		[ "$CMD" != "info" ] && \
 		[ "$CMD" != "new-config" ] && \
 		[ "$CMD" != "update" ] && \
@@ -337,19 +364,36 @@ file distributed with slackpkg.\n"
 # Got the name of a package, without version-arch-release data
 #
 function cutpkg() {
-	echo ${1/%.t[blxg]z/} | awk -F- 'OFS="-" { 
-				if ( NF > 3 ) { 
-					NF=NF-3
-					print $0 
-				} else {
-					print $0
-				}
-			}'
+	echo ${1/%.t[blxg]z/} | awk -F- -f /usr/libexec/slackpkg/cutpkg.awk
+}
+
+# The same, but reading packages from stdin
+#
+function batchcutpkg() {
+	awk -F- -f /usr/libexec/slackpkg/cutpkg.awk
 }
 
 # Show the slackpkg usage
 #
 function usage() {
+	echo -e "\
+slackpkg - version $VERSION\n\
+\nUsage:\n\
+\tslackpkg [OPTIONS] {install|remove|search|file-search|
+\t\t\t    upgrade|reinstall|blacklist} {PATTERN|FILE}
+\tslackpkg [OPTIONS] {generate-template|install-template|remove-template}
+\t\t\t   TEMPLATENAME
+\tslackpkg [OPTIONS] info PACKAGE
+\tslackpkg [OPTIONS] update [gpg]
+\tslackpkg [OPTIONS] {clean-system|upgrade-all|install-new}
+\tslackpkg [OPTIONS] {new-config|check-updates|help}
+\nIf you need more information try to use 'slackpkg help' or look the\n\
+slackpkg's manpage.
+"
+	cleanup
+}
+
+function full_usage() {
 	echo -e "\
 slackpkg - version $VERSION\n\
 \nUsage: \tslackpkg update [gpg]\t\tdownload and update files and 
@@ -379,7 +423,9 @@ slackpkg - version $VERSION\n\
 \tslackpkg download\t\tOnly download (do not install) a package
 \tslackpkg info package\t\tShow package information 
 \t\t\t\t\t(works with only ONE package)
-\tslackpkg search file\t\tSearch for a specific file in the
+\tslackpkg search package\t\tSearch packages that have a
+\t\t\t\t\tselected name
+\tslackpkg file-search file\tSearch for a specific file in the
 \t\t\t\t\tentire package collection
 \tslackpkg new-config\t\tSearch for new configuration files and
 \t\t\t\t\task to user what to do with them.
@@ -388,12 +434,48 @@ slackpkg - version $VERSION\n\
 \t\t\t\t\tin your machine.
 \tslackpkg install-template\tInstall selected template.
 \tslackpkg remove-template\tRemove selected template. Be careful.
+\tslackpkg help\t\t\tShow this screen. 
 \nYou can see more information about slackpkg usage and some examples
-in slackpkg's manpage. You can use partial package names (such as x11
-instead x11-devel, x11-docs, etc), or even Slackware series
+in slackpkg's manpage. You can use partial package names (such as xorg 
+instead of xorg-server, xorg-docs, etc), or even Slackware series
 (such as "n","ap","xap",etc) when searching for packages.
 "
 	cleanup
+}
+
+# Verify if we have enough disk space to install selected package
+#
+function havespace() {
+	local DSIZE
+	local ASIZE
+	DSIZE=$(grep "^${1}" ${TMPDIR}/tempsize | \
+		awk 'BEGIN { tot=0 } { tot+=$2 } END { print int(tot/1024)+1}')
+	ASIZE=$(df ${1} | awk '/% \// { print 0+$(NF-2) }')
+	if [ ${DSIZE} -gt ${ASIZE} ] ; then
+		ISOK=0
+	fi
+}
+
+function checksize() {
+	local i
+	local ISOK=1
+	tar -tvf ${1} | tr -s ' ' | grep -v '^[dl]' | cut -f6,3 -d\ | \
+	sed 's,[^/]*$,,' | awk '
+	{ size[$2]+=$1 }
+	END { 
+	    	for (i in size) { 
+			print "/"i,size[i]
+		}
+	}' > ${TMPDIR}/tempsize
+
+	for i in $(tac /proc/mounts | grep "^/dev" |cut -f2 -d\ ); do
+		if grep -q "^${i}" ${TMPDIR}/tempsize ; then
+			havespace ${i}
+			grep -v "^${i}/" ${TMPDIR}/tempsize > ${TMPDIR}/tempsize.tmp
+			mv ${TMPDIR}/tempsize.tmp ${TMPDIR}/tempsize
+		fi	
+	done
+	echo ${ISOK}
 }
 
 # Verify if the package was corrupted by checking md5sum
@@ -412,11 +494,14 @@ function checkmd5() {
 	fi
 }
 
+# Verify the GPG signature of files/packages
+#
 function checkgpg() {
 	gpg --verify ${1}.asc ${1} 2>/dev/null && echo "1" || echo "0"
 }
 
-
+# Check if package blacklisted 
+#
 function checkblacklist {
         local i
         local BLKNAME="${PKGDATA[1]}"
@@ -434,6 +519,10 @@ function checkblacklist {
 	fi
 }
 
+# Found packages in repository. 
+# This function selects the package from the higher priority
+# reposistory directories.
+#
 function givepriority {
         local DIR
         local ARGUMENT=$1
@@ -460,6 +549,16 @@ function givepriority {
         done
 }
 
+# Creates files with mirror package names (spkg), local package
+# names (lpkg) and packages unique to one or other file (dpkg)
+#
+function listpkgname() {
+	cut -f2 -d\  ${TMPDIR}/pkglist | sort > ${TMPDIR}/spkg	
+	cut -f2 -d\  ${TMPDIR}/tmplist | sort > ${TMPDIR}/lpkg
+	cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
+		cut -f2-6 -d\ |sort | uniq -u | \
+		cut -f1 -d\  | uniq > ${TMPDIR}/dpkg
+}
 
 # Function to make install/reinstall/upgrade lists
 #
@@ -498,15 +597,15 @@ function makelist() {
 	case "$CMD" in
 		download)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
-					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
+				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
+					LIST="$LIST $(grep " ${i} " ${TMPDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
 				done
 				LIST="$(echo -e $LIST | sort -u)"
 			done
 		;;
 		blacklist)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 						grep -w -- "${ARGUMENT}" | cut -f2 -d\  | sort -u); do
 					grep -qx "${i}" ${CONF}/blacklist || LIST="$LIST $i"
 				done
@@ -551,17 +650,20 @@ function makelist() {
 			done
 		;;
 		clean-system)
-	                for i in $(cut -f6 -d\  ${TMPDIR}/tmplist); do
-				NAME=$(cutpkg $i)
-				if [ $(cut -f2 -d\  ${WORKDIR}/pkglist |grep -cx "${NAME}") = "0" ] &&
-					[ $(grep -cx "${NAME}" $CONF/blacklist) = 0 ]; then
-					LIST="$LIST $i"
-                        	fi
-                	done
+			listpkgname
+			for i in $(comm -2 -3 ${TMPDIR}/lpkg ${TMPDIR}/spkg) ; do
+				PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
+				[ ! "$PKGDATA" ] && continue
+				checkblacklist && continue
+				LIST="$LIST ${PKGDATA[5]}" 
+				unset PKGDATA
+			done				
 		;;
 		upgrade-all)
-			for i in $(cut -f2 -d\  ${TMPDIR}/tmplist); do
-
+			listpkgname
+			for i in $(comm -1 -2 ${TMPDIR}/lpkg ${TMPDIR}/dpkg | \
+				   comm -1 -2 - ${TMPDIR}/spkg) ; do
+	
 				givepriority ${i}
 				[ ! "$FULLNAME" ] && continue
 
@@ -600,6 +702,36 @@ function makelist() {
 					LIST="$LIST ${FULLNAME}"
 			done
 		;;	
+		search|file-search)
+			if [ "$CMD" = "file-search" ]; then
+				# Search filelist.gz for possible matches
+				for i in ${PRIORITY[@]}; do
+					if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
+						PKGS="$(zegrep -w "${INPUTLIST}" ${WORKDIR}/${i}-filelist.gz | \
+							cut -d\  -f 1 | awk -F'/' '{print $NF}')"
+						for FULLNAME in $PKGS ; do
+							NAME=$(cutpkg ${FULLNAME})
+							echo $LIST | \
+								grep -qe "${NAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
+								continue
+							LIST="$LIST ${FULLNAME}"
+						done
+					fi
+				done
+			else
+				for i in ${PRIORITY[@]}; do
+					PKGS=$(grep "^${i}.*${PATTERN}" \
+						${TMPDIR}/pkglist | cut -f6 -d\ )
+					for FULLNAME in $PKGS ; do
+						NAME=$(cutpkg ${FULLNAME})
+						echo $LIST | \
+							grep -qe "${NAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
+							continue
+						LIST="$LIST ${FULLNAME}"
+					done
+				done
+			fi
+		;;	
 	esac
 	LIST=$(echo -e $LIST | tr \  "\n" | uniq )
 
@@ -627,6 +759,49 @@ function answer() {
 	fi
 }
 
+function searchlist() {
+	local i
+	local BASENAME
+	local RAWNAME
+	local STATUS
+	local INSTPKG
+
+	for i in $1; do
+	    if [ "$BASENAME" = "$(cutpkg ${i})" ]; then
+		continue
+	    fi
+	    # BASENAME is base package name 
+	    BASENAME="$(cutpkg ${i})"
+
+	    # RAWNAME is Latest available version  
+	    RAWNAME="${i/%.t[blxg]z/}"
+
+	    # Default is uninstalled
+	    STATUS="uninstalled"
+
+	    # First is the package already installed?
+	    # Amazing what a little sleep will do
+	    # exclusion is so much nicer :)
+	    INSTPKG=$(ls -1 /var/log/packages | \
+		grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+")
+
+		# INSTPKG is local version
+		if [ ! "${INSTPKG}" = "" ]; then
+
+		# If installed is it uptodate?
+		if [ "${INSTPKG}" = "${RAWNAME}" ]; then
+		    STATUS=" installed "
+		    echo "[${STATUS}] - ${INSTPKG}"
+		else
+		    STATUS="  upgrade  "
+		echo "[${STATUS}] - ${INSTPKG} --> ${RAWNAME}"
+		fi
+		else
+		    echo "[${STATUS}] - ${RAWNAME}"
+		fi
+	done
+}
+
 # Show the lists and asks if the user want to proceed with that action
 # Return accepted list in $SHOWLIST
 #
@@ -649,11 +824,15 @@ function showlist() {
 
 function getfile() {
         if [ "$LOCAL" = "1" ]; then
-                echo -e "\t\t\tCopying $1..."
-                cp ${SOURCE}$1 $2 2>/dev/null
+                echo -e "\t\t\tLinking $1..."
+                if [ -e $1 ]; then
+			ln -s $1 $2 2>/dev/null
+		else
+			return 1
+		fi
         else
                 echo -e "\t\t\tDownloading $1..."
-                wget ${WGETFLAGS} ${SOURCE}$1 -O $2
+		$DOWNLOADER $2 $1
         fi
 }                                                       
 
@@ -667,7 +846,7 @@ function getpkg() {
 	local NAMEPKG
 	local CACHEPATH
 
-	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${WORKDIR}/pkglist) )
+	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${TMPDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}.${PKGNAME[7]}
 	FULLPATH=${PKGNAME[6]}
 	CACHEPATH=${TEMP}/${FULLPATH}
@@ -683,27 +862,29 @@ function getpkg() {
 		# to CACHEPATH else, download packages from remote host and 
 		# put then in CACHEPATH
 		#
-		if [ "${LOCAL}" = "1" ]; then 
-                	echo -e "\tCopying $NAMEPKG..."
-			cp ${SOURCE}${FULLPATH}/${NAMEPKG} ${CACHEPATH}
-			if [ "$CHECKGPG" = "on" ]; then
-				cp ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${CACHEPATH}
-			fi
-		else
-                	echo -e "\tDownloading $NAMEPKG..."
-			wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
-			if [ "$CHECKGPG" = "on" ]; then
-				wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
-			fi
+		getfile ${SOURCE}${FULLPATH}/${NAMEPKG} \
+			${CACHEPATH}/${NAMEPKG} 
+		if [ "$CHECKGPG" = "on" ]; then
+			getfile ${SOURCE}${FULLPATH}/${NAMEPKG}.asc \
+				${CACHEPATH}/${NAMEPKG}.asc
 		fi
 
-		if ! [ -e $CACHEPATH/$1 ]; then
+		if ! [ -e ${CACHEPATH}/$1 ]; then
 			ERROR="Not found"
 			ISOK="0"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
 		fi
 	else
 		echo -e "\tPackage $1 is already in cache - not downloading" 
+	fi
+
+	# Check if we have sufficient disk space to install selected package
+        if [ "$CHECKSIZE" = "on" ] && [ "$ISOK" = "1" ]; then
+		ISOK=$(checksize ${CACHEPATH}/$1)
+		if [ "$ISOK" = "0" ]; then
+			ERROR="Insufficient disk space"
+			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
 	fi
 
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
@@ -775,7 +956,7 @@ function checkchangelog()
 	# Download ChangeLog.txt first of all and test if it's equal
 	# or different from our already existent ChangeLog.txt 
 	#
-	getfile ChangeLog.txt $TMPDIR/ChangeLog.txt
+	getfile ${SOURCE}ChangeLog.txt $TMPDIR/ChangeLog.txt
 	if ! grep -q "[a-z]" $TMPDIR/ChangeLog.txt ; then
 		echo -e "\
 \nError downloading from $SOURCE.\n\
@@ -802,7 +983,7 @@ function updatefilelists()
 		fi
 	fi
 	echo
-	cp $TMPDIR/ChangeLog.txt ${WORKDIR}/ChangeLog.txt
+	cp ${TMPDIR}/ChangeLog.txt ${WORKDIR}/ChangeLog.txt
 
 	#
 	# Download MANIFEST, FILELIST.TXT and CHECKSUMS.md5
@@ -812,14 +993,14 @@ function updatefilelists()
 	#
 	echo -e "\t\tList of all files"
 	for i in ${PRIORITY[@]} ; do 
-		getfile ${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
+		getfile ${SOURCE}${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
 			DIRS="$DIRS $i"
 	done
 
 	ISOK="1"
 	echo -e "\t\tChecksums"
-	getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
-	getfile CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
+	getfile ${SOURCE}CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
+	getfile ${SOURCE}CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
 	if ! [ -e "${TMPDIR}/CHECKSUMS.md5" ]; then
 		echo -e "\
 \n\t\tWARNING: Your mirror appears incomplete and is missing the\n\
@@ -852,10 +1033,10 @@ function updatefilelists()
 
 	ISOK="1"
 	echo -e "\t\tPackage List"
-	getfile FILELIST.TXT $TMPDIR/FILELIST.TXT
+	getfile ${SOURCE}FILELIST.TXT ${TMPDIR}/FILELIST.TXT
 	if [ "$CHECKMD5" = "on" ]; then
-		CHECKSUMSFILE=$TMPDIR/CHECKSUMS.md5
-		ISOK=$(checkmd5 $TMPDIR/FILELIST.TXT)
+		CHECKSUMSFILE=${TMPDIR}/CHECKSUMS.md5
+		ISOK=$(checkmd5 ${TMPDIR}/FILELIST.TXT)
 	fi
 	if [ "$ISOK" = "1" ]; then 
 		if ! [ -e $WORKDIR/LASTUPDATE ]; then
@@ -902,7 +1083,7 @@ function updatefilelists()
 	# 
 	echo -e "\t\tPackage descriptions"
 	for i in $DIRS; do
-		getfile ${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
+		getfile ${SOURCE}${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
 	done
 
 	# Format FILELIST.TXT
@@ -963,15 +1144,20 @@ function sanity_check() {
 	local DOUBLEFILES
 	local ANSWER
 
+	touch ${TMPDIR}/waiting
+	echo -e "Checking local integrity... \c"
+
+	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
+
 	for i in $(ls -1 /var/log/packages | \
 		egrep -- "^.*-(${ARCH}|fw|noarch)-[^-]+-upgraded"); do
 		REVNAME=$(echo ${i} | awk -F'-upgraded' '{ print $1 }')
 		mv /var/log/packages/${i} /var/log/packages/${REVNAME}
 		mv /var/log/scripts/${i} /var/log/scripts/${REVNAME}
-	done 
-	for i in $(ls -1 /var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$"); do
-		cutpkg $i
-	done | sort > $TMPDIR/list1
+	done
+	
+	ls -1 /var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$" | \
+				  batchcutpkg | sort > $TMPDIR/list1 
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2
 	FILES="$(diff $TMPDIR/list1 $TMPDIR/list2 | grep '<' | cut -f2 -d\ )"
 	if [ "$FILES" != "" ]; then
@@ -981,6 +1167,10 @@ function sanity_check() {
 		done
 		unset FILES
 	fi
+
+	rm ${TMPDIR}/waiting
+	echo -e "DONE"
+
 	if [ "$DOUBLEFILES" != "" ]; then
 		echo -e "\
 You have a broken /var/log/packages - with two versions of the same package.\n\
@@ -1105,16 +1295,18 @@ parse_template() {
 }
 
 generate_template() {
-	(
-		cd $TEMPLATEDIR
-		if [ "$(ls *.template 2>/dev/null)" != "" ]; then
-			echo -e "\tParsing actual template files:"
-			for i in *.template ; do
-				echo -e "\t\t$i"
-				parse_template $i
-			done
-		fi
-	)
+	if [ "$USE_INCLUDES" = "on" ]; then
+		(
+			cd $TEMPLATEDIR
+			if [ "$(ls *.template 2>/dev/null)" != "" ]; then
+				echo -e "\tParsing actual template files:"
+				for i in *.template ; do
+					echo -e "\t\t$i"
+					parse_template $i
+				done
+			fi
+		)
+	fi
 
 	touch $TMPDIR/allheaders
 
