@@ -1,6 +1,72 @@
 ChangeLog
 ---------
 
+2009 Fri Mar 06
+---------------
+	- If FILELIST.TXT isn't found, use CHECKSUMS.md5 to the
+	  same thing
+	- Fix some problems in parsing MANIFEST.bz2 files
+	- Release as first 2.71beta1
+
+2008 Mon Dec 22
+---------------
+	- Include check-updates option
+	- Fix problem with MORE env variable. Now slackpkg uses
+	  MORECMD internally
+
+2008 Thu Dec 04
+---------------
+	- Change version in man-pages (ok, put the version in man-pages
+	  probably was the most stupid idea that i had).
+	- Released 2.70.5
+
+2008 Mon Dec 01
+---------------
+        - Update mirrors file for Slackware 12.2 (Thanks rworkman!)
+	- Change version to 2.70.5 (Thanks rworkman!)
+
+2008 Tue Nov 25
+---------------
+        - Fix install-new.awk file to catch the return of
+          bluez-libs and bluez-utils
+
+2008 Fri Nov 21
+---------------
+	- We are in Slackware main-tree!!! Big Thanks Patrick!
+	  Big thanks to all our users!
+
+2008 Fri May 02
+---------------
+	- Fix regexp in slackpkg.conf to x86 arch. It was missing
+	  kernel-headers package
+	- Released 2.70.4 
+
+2008 Wed Apr 30
+---------------
+        - Fix regexps to catch "fw" packages
+	- Released 2.70.3
+
+2008 Tue Apr 08
+---------------
+	- Added xbacklight, ntfs-3g, wqy-zenhei-font-ttf, 
+	  xf86-video-geode and ghostscript packages to install-new
+	  list.
+	- Released 2.70.2 
+
+2008 Sat Mar 15
+---------------
+	- Released 2.70.1
+
+2008 Fri Mar 14
+---------------
+	- Compressed man-pages
+	- Fix problem with somo proxys adding ^M at FILELIST.TXT
+
+2008 Tue Jan 29
+---------------
+	- Released slackpkg 2.70
+	- Happy Birthday Marina!
+
 2008 Mon Jan 28
 ---------------
 	- Fix problem with duplicated packages in package list

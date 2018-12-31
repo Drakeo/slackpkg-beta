@@ -4,7 +4,7 @@ showdiff() {
 	FULLNAME="${FILEPATH}/${BASENAME}"
 
 	if [ -e ${FULLNAME} ]; then
-	    diff -u ${FULLNAME} ${FULLNAME}.new|more
+	    diff -u ${FULLNAME} ${FULLNAME}.new | $MORECMD
 	else
 	    echo "file $FULLNAME doesn't exist"
 	fi

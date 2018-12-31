@@ -189,12 +189,12 @@ with slackpkg.\n"
 
 	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
 		DIALOG=off
-		MORE=cat
+		MORECMD=cat
 		if [ "$DEFAULT_ANSWER" = "" ]; then
 			DEFAULT_ANSWER=n
 		fi
 	else
-		MORE=more
+		MORECMD=more
 	fi
 	echo 
 }
@@ -219,6 +219,8 @@ function usage() {
 slackpkg - version $VERSION\n\
 \nUsage: \tslackpkg update [gpg]\t\tdownload and update files and 
 \t\t\t\t\tpackage indexes
+\tslackpkg check-updates\t\tcheck if there is any news on
+\t\t\t\t\tSlackware's ChangeLog.txt
 \tslackpkg install package\tdownload and install packages 
 \tslackpkg upgrade package\tdownload and upgrade packages
 \tslackpkg reinstall package\tsame as install, but for packages 
@@ -370,7 +372,7 @@ function makelist() {
 					case $CMD in
 						'upgrade')
 							VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | \
-							      grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+")
+							      grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
 							[ "${FULLNAME}" != "${VRFY}" ]  && \
 										[ "${VRFY}" ] && \
 								LIST="$LIST ${FULLNAME}"
@@ -414,7 +416,7 @@ function makelist() {
 				givepriority ${i}
 				[ ! "$FULLNAME" ] && continue
 
-				VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+")
+				VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
 				[ "${FULLNAME}" != "${VRFY}" ]  && \
 							[ "${VRFY}" ] && \
 					LIST="$LIST ${FULLNAME}"
@@ -422,7 +424,9 @@ function makelist() {
 		;;
 		install-new)
 			for i in $(awk -f /usr/libexec/slackpkg/install-new.awk ${WORKDIR}/ChangeLog.txt |\
-				  sort -u ) dialog aaa_terminfo fontconfig ; do
+				  sort -u ) dialog aaa_terminfo fontconfig \
+				ntfs-3g ghostscript wqy-zenhei-font-ttf \
+				xbacklight xf86-video-geode ; do
 	
 				givepriority $i
 				[ ! "$FULLNAME" ] && continue
@@ -462,7 +466,7 @@ function showlist() {
 	local ANSWER
 	local i
 
-	for i in $1; do echo $i; done | $MORE 
+	for i in $1; do echo $i; done | $MORECMD
 	echo
 	countpkg "$1"
 	echo -e "Do you wish to $2 selected packages (Y/n)? \c"
@@ -577,7 +581,7 @@ function getpkg() {
 
 # Main logic to download and format package list, md5 etc.
 #
-function updatefilelists()
+function checkchangelog()
 {
 	if ! [ -e ${WORKDIR}/ChangeLog.txt ]; then
 		touch ${WORKDIR}/ChangeLog.txt
@@ -597,6 +601,15 @@ Please, check your mirror and try again."
 	fi
 
 	if diff --brief ${WORKDIR}/ChangeLog.txt $TMPDIR/ChangeLog.txt ; then
+		return 0
+	else
+		return 1
+	fi
+}
+
+function updatefilelists()
+{
+	if checkchangelog ; then
 		echo -e "\
 \n\t\tNo changes in ChangeLog.txt between your last update and now.\n\
 \t\tDo you really want to download all other files (y/N)? \c"
@@ -623,6 +636,14 @@ Please, check your mirror and try again."
 	echo -e "\t\tPackage List"
 	getfile FILELIST.TXT $TMPDIR/FILELIST.TXT
 
+	if [ -e $TMPDIR/FILELIST.TXT ] && \
+	   [ $(grep -c tgz $TMPDIR/FILELIST.TXT) -gt 1 ]; then
+	  	FILELIST="$TMPDIR/FILELIST.TXT"
+	else
+		CHECKPKG="on"
+		FILELIST="$TMPDIR/CHECKSUMS.md5"
+	fi 
+
 	if [ "$CHECKPKG" = "on" ]; then
 		echo -e "\t\tChecksums"
 		getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
@@ -639,8 +660,10 @@ Please, check your mirror and try again."
 	# Format FILELIST.TXT
 	#
 	echo -e "\tFormatting lists to slackpkg style..."
-	echo -e "\t\tPackage List"
-	grep "\.tgz" $TMPDIR/FILELIST.TXT| awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/pkglist 
+	echo -e "\t\tPackage List: using $FILELIST as source"
+	grep "\.tgz" $FILELIST| \
+		awk -f /usr/libexec/slackpkg/pkglist.awk |\
+		sed -e 's/^M//g' > ${TMPDIR}/pkglist
 	cp ${TMPDIR}/pkglist ${WORKDIR}/pkglist		
 
 	# Format MANIFEST
@@ -677,12 +700,12 @@ function sanity_check() {
 	local ANSWER
 
 	for i in $(ls -1 /var/log/packages | \
-		egrep -- "^.*-(${ARCH}|noarch)-[^-]+-upgraded"); do
+		egrep -- "^.*-(${ARCH}|fw|noarch)-[^-]+-upgraded"); do
 		REVNAME=$(echo ${i} | awk -F'-upgraded' '{ print $1 }')
 		mv /var/log/packages/${i} /var/log/packages/${REVNAME}
 		mv /var/log/scripts/${i} /var/log/scripts/${REVNAME}
 	done 
-	for i in $(ls -1 /var/log/packages | egrep "^.*-(${ARCH}|noarch)-[^-]+$"); do
+	for i in $(ls -1 /var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$"); do
 		cutpkg $i
 	done | sort > $TMPDIR/list1
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2
@@ -702,7 +725,7 @@ worry about this list - when you select your action, slackpkg will show a\n\
 better list:\n"
 		for i in $DOUBLEFILES ; do
 			ls -1 /var/log/packages |\
-				egrep -i -- "^${i}-[^-]+-(${ARCH}|noarch)-"
+				egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-"
 		done
 		echo -ne "\n\
 You can (B)lacklist, (R)emove, or (I)gnore these packages.\n\
@@ -717,7 +740,7 @@ Select your action (B/R/I): "
 			R|r)
 				for i in $DOUBLEFILES ; do
 					FILE=$(ls -1 /var/log/packages |\
-						egrep -i -- "^${i}-[^-]+-(${ARCH}|noarch)-")
+						egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-")
 					FILES="$FILES $FILE"
 				done
 				showlist "$FILES" remove

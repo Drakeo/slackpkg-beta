@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.70
+VERSION=2.71beta1
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 SLACKKEY="Slackware Linux Project <security@slackware.com>"
@@ -172,7 +172,7 @@ while [ -n "$1" ] ; do
         shift
       fi
     ;;
-    install-new|upgrade-all|clean-system|new-config)
+    install-new|upgrade-all|clean-system|new-config|check-updates)
       CMD=$1
       shift
       if [ -n "$1" ]; then
@@ -219,6 +219,13 @@ done
 # A *BIG* case with all slackpkg commands -:)
 #
 case "$CMD" in
+	"check-updates")
+		if checkchangelog 1>/dev/null 2>/dev/null ; then
+			echo "No news is good news"
+		else
+			echo "News on ChangeLog.txt"
+		fi
+		;;
 	"update")
 		# If you are using "slackpkg update gpg" OR the system
 		# doesn't have Slackware GPG key, download and install
@@ -382,7 +389,7 @@ case "$CMD" in
 				for j in $PKGS ; do
 					NEWONE=`cutpkg ${j}`
 					echo $PACKAGES | \
-						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|noarch\)-[[:digit:]]\+" && \
+						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+" && \
 						continue
 					PACKAGES="$PACKAGES $j"
 				done
@@ -411,7 +418,7 @@ The list below shows all packages with the selected pattern.\n"
 			# Amazing what a little sleep will do
 			# exclusion is so much nicer :)
 			INSTPKG=$(ls -1 /var/log/packages | \
-				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|noarch\)-[[:digit:]]\+")
+				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+")
 
 			    # INSTPKG is local version
 			    if [ ! "${INSTPKG}" = "" ]; then
@@ -433,7 +440,7 @@ The list below shows all packages with the selected pattern.\n"
 	"info")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`
 		NAME=$(cutpkg $PATTERN)
-		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|noarch)-[[:digit:]]+/,/^$/ {
+		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[[:digit:]]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
 				 print \$PATTERN 
@@ -462,7 +469,8 @@ esac
 # That options don't change configurations files and, if 
 # someone remove the kernel, i hope he knows what is doing.
 #
-for i in remove search update blacklist info clean-system download; do
+for i in check-updates remove search update blacklist info \
+	 clean-system download; do
 	if [ "$CMD" = "$i" ]; then
 		POSTINST=off
 	fi
