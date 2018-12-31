@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.70beta2
+VERSION=2.70
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 SLACKKEY="Slackware Linux Project <security@slackware.com>"
@@ -140,7 +140,7 @@ while [ -n "$1" ] ; do
 	SOURCE=$(echo $1 | cut -f2 -d=)
 	shift
     ;; 
-    install|reinstall|upgrade|remove|search|blacklist|info)
+    install|reinstall|upgrade|remove|search|blacklist|download|info)
       CMD=$1
       shift
       if [ -n "$1" ]; then
@@ -430,7 +430,7 @@ The list below shows all packages with the selected pattern.\n"
 		fi
 	;;
 	"info")
-		NAME=$(cutpkg $PATTERN)
+		NAME=$(cutpkg $INPUTLIST)
 		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|noarch)-[[:digit:]]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
@@ -460,7 +460,7 @@ esac
 # That options don't change configurations files and, if 
 # someone remove the kernel, i hope he knows what is doing.
 #
-for i in remove search update blacklist info clean-system; do
+for i in remove search update blacklist info clean-system download; do
 	if [ "$CMD" = "$i" ]; then
 		POSTINST=off
 	fi

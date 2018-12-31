@@ -1,6 +1,14 @@
 ChangeLog
 ---------
 
+2008 Fri Jan 18
+---------------
+	- Fixed an error when checking GPG key. This is caused
+	  by the "backticks" enhancement, reported by many and
+	  fixed by rworkman, many thanks!
+	- No more bug reports in a week, time to release
+	- Relased slackpkg 2.70
+
 2008 Wed Jan 10 
 ---------------
 	- Updated "mirrors" file

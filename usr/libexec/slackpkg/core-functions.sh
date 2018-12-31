@@ -173,7 +173,7 @@ with slackpkg.\n"
 	# Check if the Slackware GPG key are found in the system
 	#                                                       
 	GPGFIRSTTIME="$(gpg --list-keys \"$SLACKKEY\" 2>/dev/null \
-			| grep -c \"$SLACKKEY\")"
+			| grep -c "$SLACKKEY")"
 	if [ "$GPGFIRSTTIME" = "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ] && \
 			[ "$CMD" != "update" ] && [ "$CHECKGPG" = "on" ]; then
 		echo -e "\n\
@@ -225,8 +225,9 @@ slackpkg - version $VERSION\n\
 \t\t\t\t\talready installed
 \tslackpkg remove package\t\tremove installed packages
 \tslackpkg clean-system\t\tremove all packages which are not 
-\t\t\t\t\tpresent in the official Slackware package set.
-\t\t\t\t\tGood to keep the house in order
+\t\t\t\t\tpresent in the official Slackware 
+\t\t\t\t\tpackage set. Good to keep the house
+\t\t\t\t\tin order
 \tslackpkg upgrade-all\t\tsync all packages installed in your 
 \t\t\t\t\tmachine with the selected mirror. This
 \t\t\t\t\tis the "correct" way to upgrade all of 
@@ -617,8 +618,9 @@ function updatefilelists()
 
 	if [ "$CHECKPKG" = "on" ]; then
 		echo -e "\t\tChecksums"
-		getfile CHECKSUMS.md5 ${WORKDIR}/CHECKSUMS.md5
+		getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
 	fi
+	cp $TMPDIR/CHECKSUMS.md5 $WORKDIR/CHECKSUMS.md5
 		
 	# Download all PACKAGES.TXT files
 	# 
@@ -631,8 +633,9 @@ function updatefilelists()
 	#
 	echo -e "\tFormatting lists to slackpkg style..."
 	echo -e "\t\tPackage List"
-	grep "\.tgz" $TMPDIR/FILELIST.TXT| awk -f /usr/libexec/slackpkg/pkglist.awk > ${WORKDIR}/pkglist 
-		
+	grep "\.tgz" $TMPDIR/FILELIST.TXT| awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/pkglist 
+	cp ${TMPDIR}/pkglist ${WORKDIR}/pkglist		
+
 	# Format MANIFEST
 	#
 		
@@ -641,8 +644,9 @@ function updatefilelists()
 	MANFILES=""
 	for i in $DIRS; do
 		bunzip2 -c $TMPDIR/${i}-MANIFEST.bz2 | awk -f /usr/libexec/slackpkg/filelist.awk | \
-			gzip > ${WORKDIR}/${i}-filelist.gz
+			gzip > ${TMPDIR}/${i}-filelist.gz
 	done
+	cp ${TMPDIR}/*-filelist.gz ${WORKDIR}/
 
 	if [ -r ${WORKDIR}/filelist.gz ]; then
 		rm ${WORKDIR}/filelist.gz
