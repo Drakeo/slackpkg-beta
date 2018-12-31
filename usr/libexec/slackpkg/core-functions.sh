@@ -206,19 +206,26 @@ the problem.\n"
 	# Checking if is the first time running slackpkg
 	#                                               
 	if ! [ -f ${WORKDIR}/pkglist ] && [ "$CMD" != "update" ]; then
-		echo -e "\
+		if [ "$SOURCE" = "" ]; then
+                	echo -e "\
 \nThis appears to be the first time you have run slackpkg.\n\
 Before you install|upgrade|reinstall anything, you need to uncomment\n\
 ONE mirror in ${CONF}/mirrors and run:\n\n\
 \t# slackpkg update\n\n\
 You can see more information about slackpkg functions in slackpkg manpage."
+		else
+			echo -e "\
+\nThe package list is missing.\n\
+Before you install|upgrade|reinstall anything you need to run:\n\n\
+\t# slackpkg update\n"
+		fi
 		cleanup
 	fi                                                      
 
 
 	# Checking if /etc/slackpkg/mirrors are in correct syntax.
 	#                                                         
-	if [ "$SOURCE" = "" ]; then
+	if [ "$SOURCE" = "" ] ; then
 		echo -e "\
 \nYou do not have any mirror selected in ${CONF}/mirrors\n\
 Please edit that file and uncomment ONE mirror.  Slackpkg\n\
@@ -438,7 +445,7 @@ function givepriority {
 	
         for DIR in ${PRIORITY[@]} ; do
 		[ "$PKGDATA" ] && break
-                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${WORKDIR}/pkglist) )
+                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${TMPDIR}/pkglist) )
                 if [ "$PKGDATA" ]; then
                         checkblacklist
                         if [ "$?" = "1" ]; then
@@ -464,6 +471,7 @@ function makelist() {
 	INPUTLIST=$@
 
 	ls -1 /var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
+	cp ${WORKDIR}/pkglist ${TMPDIR}/pkglist
 
 	touch ${TMPDIR}/waiting
 
@@ -506,7 +514,7 @@ function makelist() {
 		;;
 		install|upgrade|reinstall)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
+				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
 					givepriority $i
 					[ ! "$FULLNAME" ] && continue
 
@@ -532,7 +540,7 @@ function makelist() {
 		;;
 		remove)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u); do
 					PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 					[ ! "$PKGDATA" ] && continue
@@ -1115,7 +1123,7 @@ generate_template() {
 	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
 	for i in /var/log/packages/* ; do 
 		PKGNAME=$( cutpkg $(basename $i))
-		grep -q " $PKGNAME " /var/lib/slackpkg/pkglist && \
+		grep -q " $PKGNAME " ${WORKDIR}/pkglist && \
 			echo $PKGNAME >> $TMPDIR/$TEMPLATE.work
 	done  
 	rm $TMPDIR/waiting

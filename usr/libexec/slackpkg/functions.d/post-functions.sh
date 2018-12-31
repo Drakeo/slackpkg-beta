@@ -137,6 +137,7 @@ What do you want (K/O/R/P)?"
 				for i in $FILES; do
 					GOEX=0
 					while [ $GOEX -eq 0 ]; do
+						echo
 						showmenu $i "(K)eep" "(O)verwrite" "(R)emove" "(D)iff" "(M)erge"
 						read ANSWER
 						case $ANSWER in

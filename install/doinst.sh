@@ -10,6 +10,15 @@ config() {
   # Otherwise, we leave the .new copy for the admin to consider...
 }
 
+remove() {
+  FILE="$1"
+  if [ -r $FILE ]; then
+    rm $FILE
+  fi
+}
+
 config etc/slackpkg/mirrors.new
 config etc/slackpkg/slackpkg.conf.new
 config etc/slackpkg/blacklist.new
+remove var/lib/slackpkg/ChangeLog.txt
+remove var/lib/slackpkg/pkglist

@@ -1,6 +1,14 @@
 ChangeLog
 ---------
 
+2009 Sun Jun 07
+---------------
+	- Change in doinst.sh to remove old pkglist at slackpkg's
+	  install.				(Thanks Klein)
+	- Change in slackpkg to use most of time ${TMPDIR}/pkglist instead
+	  ${WORKDIR}/pkglist.
+	- Released as 2.80beta3
+
 2009 Wed Jun 03
 ---------------
 	- Change "tput cub1" to "tput sc" and "tput rc". This give back to
