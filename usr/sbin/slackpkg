@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.81beta
+VERSION=2.81beta2
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 CONF=/etc/slackpkg
@@ -87,6 +87,14 @@ while [ -n "$1" ] ; do
       CHECKGPG=off
       shift
     ;;
+    -checksize=on)
+      CHECKSIZE=on
+      shift
+    ;;
+    -checksize=off)
+      CHECKSIZE=off
+      shift
+    ;;
     -postinst=on)
       POSTINST=on
       shift
@@ -117,6 +125,10 @@ while [ -n "$1" ] ; do
     ;;
     -dialog=off)
       DIALOG=off
+      shift
+    ;;
+    -dialog_maxargs=*)
+      DIALOG_MAXARGS=$(echo $1 | cut -f2 -d=)
       shift
     ;;
     -batch=on)
@@ -160,8 +172,8 @@ while [ -n "$1" ] ; do
       shift
     ;;
     -mirror=*)
-	SOURCE=$(echo $1 | cut -f2 -d=)
-	shift
+      SOURCE=$(echo $1 | cut -f2 -d=)
+      shift
     ;; 
     install|reinstall|upgrade|remove|blacklist|download)
       CMD=$1

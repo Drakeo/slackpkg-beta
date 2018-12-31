@@ -1,6 +1,29 @@
 ChangeLog
 ---------
 
+2010 Mon Apr 19
+---------------
+	- Now we can, before install or upgrade a package, verify
+	  if the system have enough available space in its filesystems.
+	  This can slowdown the upgrade/install process but can save a lot
+	  of problems.
+		. Added CHECKSIZE on slackpkg.conf
+		. Added CHECKSIZE on slackpkg.conf manpage
+		. Added -checksize on usr/sbin/slackpkg
+		. Added havespace and checksize functions on core-functions.sh
+	- Released as slackpkg-2.81beta2
+
+2010 Sun Apr 18
+---------------
+	- Added DIALOG_MAXARGS variable. This is to set the max number of
+	  characters that dialog can handle. If DIALOG_MAXARGS is unset we
+	  use the traditional 19500 characters. Removing hints when
+	  we reach DIALOG_MAXARGS *ISN'T A BUG* is a *FIX*. Without that,
+	  upgrade from slackware-X to slackware-X+1 will be impossible.
+		. Added DIALOG_MAXARGS on slackpkg.conf
+		. Added DIALOG_MAXARGS on slackpkg.conf manpage
+		. Added -dialog_maxargs on usr/sbin/slackpkg
+ 
 2010 Tue Feb 16
 ---------------
 	- Fix x86 32bits regexp to not catch x86_64 packages
@@ -8,7 +31,10 @@ ChangeLog
 		. uniq in listpkgname function
 		. tell the user the ignored arguments
 		. respect only .sh functions on functions.d
-	
+	- Split mirrors file by architecture. doinst.sh copy the
+	  right file to right place.
+	- Change references to <piterpk@terra.com.br> to 
+	  <piterpunk@slackware.com>
 
 2009 Sat Dec 12
 ---------------

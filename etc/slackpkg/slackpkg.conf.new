@@ -84,6 +84,11 @@ CHECKMD5=on
 # before install/upgrade/reinstall is performed.
 CHECKGPG=on
 
+# If CHECKSIZE is "on", the system will check if we have sufficient disk
+# space to install selected package. This make upgrade/install safer, but slow
+# upgrade/install process.
+CHECKSIZE=on
+
 # PRIORITY sets the download priority. slackpkg will try to found the
 # package first in the first value, then the second one, through all
 # values in list.
@@ -135,6 +140,11 @@ USE_INCLUDES=on
 # Enables a spinning bar as visual feedback when slackpkg is making its
 # internal lists and some other operations.  Default=on
 SPINNING=on
+
+# Max number of characters that "dialog" command can handle.
+# If unset, this variable will be 19500 (the number that works on
+# Slackware 10.2)
+DIALOG_MAXARGS=139000
 
 #
 # The MIRROR is set from /etc/slackpkg/mirrors

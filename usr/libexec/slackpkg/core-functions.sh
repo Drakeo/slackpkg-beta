@@ -146,6 +146,7 @@ function system_setup() {
 	SLACKCFVERSION=$(grep "# v[0-9.]\+" $CONF/slackpkg.conf | cut -f2 -dv)
 	CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
 	KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
+	DIALOG_MAXARGS=${DIALOG_MAXARGS:-19500}
 	echo "$0 $VERSION - Slackware Linux $SLACKWARE_VERSION" > $TMPDIR/timestamp
 }
 
@@ -433,6 +434,40 @@ instead xorg-server, xorg-docs, etc), or even Slackware series
 (such as "n","ap","xap",etc) when searching for packages.
 "
 	cleanup
+}
+
+# Verify if we have enough disk space to install selected package
+#
+function havespace() {
+	local DSIZE
+	local ASIZE
+	DSIZE=$(grep "^${1}/" ${TMPDIR}/tempsize | \
+		awk 'BEGIN { tot=0 } { tot+=$2 } END { print int(tot/1024)+1}')
+	ASIZE=$(df /${1} | awk '/% \// { print 0+$(NF-2) }')
+	if [ ${DSIZE} -gt ${ASIZE} ]; then
+		ISOK=0
+	fi
+}
+
+function checksize() {
+	local i
+	local ISOK=1
+	tar -tvf ${1} | tr -s ' ' | grep -v '^[dl]' | cut -f6,3 -d\ | \
+	sed 's,[^/]*$,,' | awk '
+	{ size[$2]+=$1 }
+	END { 
+	    	for (i in size) { 
+			print "/"i,size[i]
+		}
+	}' > ${TMPDIR}/tempsize
+
+	for i in $(tac /proc/mounts | grep "^/dev" |cut -f2 -d\ | cut -c2-); do 
+		havespace /${i}
+		grep -v "^/${i}/" ${TMPDIR}/tempsize > ${TMPDIR}/tempsize.tmp
+		mv ${TMPDIR}/tempsize.tmp ${TMPDIR}/tempsize
+	done
+	havespace
+	echo ${ISOK}
 }
 
 # Verify if the package was corrupted by checking md5sum
@@ -842,6 +877,15 @@ function getpkg() {
 		fi
 	else
 		echo -e "\tPackage $1 is already in cache - not downloading" 
+	fi
+
+	# Check if we have sufficient disk space to install selected package
+        if [ "$CHECKSIZE" = "on" ] && [ "$ISOK" = "1" ]; then
+		ISOK=$(checksize ${CACHEPATH}/$1)
+		if [ "$ISOK" = "0" ]; then
+			ERROR="Insufficient disk space"
+			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
 	fi
 
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
