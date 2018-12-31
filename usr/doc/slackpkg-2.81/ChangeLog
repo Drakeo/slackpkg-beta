@@ -1,6 +1,15 @@
 ChangeLog
 ---------
 
+2010 Tue Feb 16
+---------------
+	- Fix x86 32bits regexp to not catch x86_64 packages
+	- Applied more patches from Grissiom:
+		. uniq in listpkgname function
+		. tell the user the ignored arguments
+		. respect only .sh functions on functions.d
+	
+
 2009 Sat Dec 12
 ---------------
 	- Fix link problem with non-existent files

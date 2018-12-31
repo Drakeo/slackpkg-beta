@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Project Page: http://slackpkg.org/
-# Roberto F. Batista (aka PiterPunk) piterpk@terra.com.br
+# Roberto F. Batista (aka PiterPunk) piterpunk@slackware.com
 # Evaldo Gardenali (aka UdontKnow) evaldogardenali@fasternet.com.br
 #
 
@@ -199,7 +199,7 @@ while [ -n "$1" ] ; do
       CMD=$1
       shift
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments."
+	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
         shift $#
       fi
     ;;
@@ -214,7 +214,7 @@ while [ -n "$1" ] ; do
       fi
 
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments."
+	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
         shift $#
       fi
     ;;
@@ -248,7 +248,7 @@ system_checkup
 #
 # Remember - the new function scripts need to be executable
 #
-for i in /usr/libexec/slackpkg/functions.d/*; do
+for i in /usr/libexec/slackpkg/functions.d/*.sh; do
 	if [ -x $i ]; then
 		. $i
 	fi

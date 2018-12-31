@@ -99,7 +99,7 @@ function system_setup() {
 	fi
 	case $ARCH in
 		i386|i486|i586|i686)
-			ARCH=[i]*[3456x]86
+			ARCH=[i]*[3456x]86[^_]*
 			SLACKKEY=${SLACKKEY:-"Slackware Linux Project <security@slackware.com>"}
 			PKGMAIN=${PKGMAIN:-slackware}
 		;;
@@ -514,7 +514,7 @@ function listpkgname() {
 	cut -f2 -d\  ${TMPDIR}/tmplist | sort > ${TMPDIR}/lpkg
 	cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 		cut -f2-6 -d\ |sort | uniq -u | \
-		cut -f1 -d\  > ${TMPDIR}/dpkg
+		cut -f1 -d\  | uniq > ${TMPDIR}/dpkg
 }
 
 # Function to make install/reinstall/upgrade lists
