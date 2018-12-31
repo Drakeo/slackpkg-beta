@@ -218,19 +218,19 @@ What do you want (K/O/R/P)?"
 lookkernel() {
 	NEWKERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
 	if [ "$KERNELMD5" != "$NEWKERNELMD5" ]; then
-		if [ -x /sbin/lilo ]; then
+		if [ -x /sbin/lilo ] && [ -r /etc/lilo.conf ]; then
 			echo -e "\n
 Your kernel image was updated.  We highly recommend you run: lilo
 Do you want slackpkg to run lilo now? (Y/n)"
 			answer
-			if [ "$ANSWER" != "n" ] && [ "$ANSWER" != "N" ]; then
+			if [ "$ANSWER" = "y" ] || [ "$ANSWER" = "Y" ]; then
 				/sbin/lilo
 			fi
 		else
 			echo -e "\n
-Your kernel image was updated and lilo is not found on your system.
-You may need to adjust your boot manager (like GRUB) to boot appropriate
-kernel."
+Your kernel image was updated, and lilo does not appear to be used on 
+your system.  You may need to adjust your boot manager (like GRUB) to 
+boot the appropriate kernel."
 		fi
 	fi
 }
