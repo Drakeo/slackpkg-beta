@@ -209,7 +209,7 @@ with slackpkg.\n"
 # Got the name of a package, without version-arch-release data
 #
 function cutpkg() {
-	echo ${1/.tgz/} | awk -F- 'OFS="-" { 
+	echo ${1/.t[blxg]z/} | awk -F- 'OFS="-" { 
 				if ( NF > 3 ) { 
 					NF=NF-3
 					print $0 
@@ -265,12 +265,12 @@ instead x11-devel, x11-docs, etc), or even Slackware series
 
 # Verify if the package was corrupted by checking md5sum
 #
-function checkpkg() {
+function checkmd5() {
 	local MD5ORIGINAL
 	local MD5DOWNLOAD
 
-	MD5ORIGINAL=$(grep "/${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ )
-	MD5DOWNLOAD=$(md5sum ${CACHEPATH}/${1} | cut -f1 -d \ )
+	MD5ORIGINAL=$(grep -m1 "/$(basename $1)$" ${CHECKSUMSFILE}| cut -f1 -d \ )
+	MD5DOWNLOAD=$(md5sum ${1} | cut -f1 -d \ )
 	if [ "$MD5ORIGINAL" = "$MD5DOWNLOAD" ]; then
 		echo 1 
 	else
@@ -279,7 +279,7 @@ function checkpkg() {
 }
 
 function checkgpg() {
-	gpg --verify ${CACHEPATH}/${1}.asc ${CACHEPATH}/${1} 2>/dev/null && echo "1" || echo "0"
+	gpg --verify ${1}.asc ${1} 2>/dev/null && echo "1" || echo "0"
 }
 
 
@@ -316,7 +316,7 @@ function givepriority {
                         checkblacklist
                         if [ "$?" = "1" ]; then
 				NAME=${PKGDATA[1]}
-                                FULLNAME=$(echo "${PKGDATA[5]}")
+                                FULLNAME=$(echo "${PKGDATA[5]}.${PKGDATA[7]}")
 			else
 				unset PKGDATA
 				unset FULLNAME
@@ -357,7 +357,7 @@ function makelist() {
 		download)
 			for ARGUMENT in $(echo $INPUTLIST); do
 				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
-					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6 -d \ )"
+					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
 				done
 				LIST="$(echo -e $LIST | sort -u)"
 			done
@@ -380,7 +380,7 @@ function makelist() {
 						'upgrade')
 							VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | \
 							      grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
-							[ "${FULLNAME}" != "${VRFY}" ]  && \
+							[ "${FULLNAME/.t[blxg]z/}" != "${VRFY}" ]  && \
 										[ "${VRFY}" ] && \
 								LIST="$LIST ${FULLNAME}"
 						;;
@@ -389,7 +389,7 @@ function makelist() {
 								LIST="$LIST ${FULLNAME}"
 						;;
 						'reinstall')
-							grep -q " ${FULLNAME} " ${TMPDIR}/tmplist && \
+							grep -q " ${FULLNAME/.t[blxg]z} " ${TMPDIR}/tmplist && \
 								LIST="$LIST ${FULLNAME}"
 						;;
 					esac
@@ -424,7 +424,7 @@ function makelist() {
 				[ ! "$FULLNAME" ] && continue
 
 				VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
-				[ "${FULLNAME}" != "${VRFY}" ]  && \
+				[ "${FULLNAME/.t[blxg]z}" != "${VRFY}" ]  && \
 							[ "${VRFY}" ] && \
 					LIST="$LIST ${FULLNAME}"
 			done
@@ -506,8 +506,8 @@ function getpkg() {
 	local NAMEPKG
 	local CACHEPATH
 
-	PKGNAME=( $(grep -w -m 1 -- "$1" ${WORKDIR}/pkglist) )
-	NAMEPKG=${PKGNAME[5]}
+	PKGNAME=( $(grep -w -m 1 -- "${1/t[blxg]z/}" ${WORKDIR}/pkglist) )
+	NAMEPKG=${PKGNAME[5]}.${PKGNAME[7]}
 	FULLPATH=${PKGNAME[6]}
 	CACHEPATH=${TEMP}/${FULLPATH}
 
@@ -549,10 +549,18 @@ function getpkg() {
 	# packages md5sum to detect if they are corrupt or not
 	#
 	if [ "$CHECKPKG" = "on" ] && [ "$ISOK" = "1" ]; then
-		ISOK=$(checkpkg $1)
+		ISOK=$(checkmd5 ${CACHEPATH}/$1)
 		if [ "$ISOK" = "0" ]; then 
 			ERROR="md5sum"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
+		if [ "$CHECKGPG" = "on" ] && [ "$ISOK" = "1" ]; then
+			ISOK=$(checkmd5 ${CACHEPATH}/$1.asc)
+			if [ "$ISOK" = "0" ]; then 
+				ERROR="md5sum"
+				echo -e "${NAMEPKG}.asc:\t$ERROR" >> \
+							$TMPDIR/error.log
+			fi
 		fi
 	fi
 
@@ -560,7 +568,7 @@ function getpkg() {
 	# disable GPG checking in /etc/slackpkg/slackpkg.conf
 	#
 	if [ "$CHECKGPG" = "on" ] && [ "$ISOK" = "1" ]; then
-		ISOK=$(checkgpg $1)
+		ISOK=$(checkgpg ${CACHEPATH}/$1)
 		if [ "$ISOK" = "0" ]; then 
 			ERROR="gpg"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
@@ -570,10 +578,10 @@ function getpkg() {
 	if [ "$ISOK" = "1" ]; then
 		case $2 in
 			installpkg)
-				echo -e "\tInstalling ${1/.tgz/}..."
+				echo -e "\tInstalling ${1/.t[blxg]z/}..."
 			;;
 			upgradepkg)
-				echo -e "\tUpgrading ${1/.tgz/}..."
+				echo -e "\tUpgrading ${1/.t[blxg]z/}..."
 			;;
 			*)
 				echo -e "\c"
@@ -647,23 +655,88 @@ function updatefilelists()
 			DIRS="$DIRS $i"
 	done
 
+	ISOK="1"
+	echo -e "\t\tChecksums"
+	getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
+	getfile CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
+	if ! [ -e "${TMPDIR}/CHECKSUMS.md5" ]; then
+		echo -e "\
+\n\t\tWARNING: Your mirror appears incomplete and is missing the\n\
+\t\t         CHECKSUMS.md5 file. We recommend you change your mirror\n\
+\t\t         so that package integrity can be verified against \n\
+\t\t         CHECKSUMS.md5.\n"
+		sleep 10
+	else
+		if [ "$CHECKGPG" = "on" ]; then
+			ISOK=$(checkgpg ${TMPDIR}/CHECKSUMS.md5)
+			if [ "$ISOK" = "0" ]; then 
+				rm $TMPDIR/CHECKSUMS.md5
+				rm $TMPDIR/CHECKSUMS.md5.asc
+				echo -e "\
+\n\t\tERROR: Verification of the  gpg signature on CHECKSUMS.md5\n\
+\t\t       failed! This could mean that the file is out of date\n\
+\t\t       or has been tampered with.\n"
+				cleanup
+			fi
+		else
+			echo -e "\
+\n\t\tWARNING: Without CHECKGPG, we can't check if this file is\n\
+\t\t         signed by:\n\
+\n\t\t         $SLACKKEY.\n\
+\n\t\t         Enabling CHECKGPG is highly recommended for best\n\
+\t\t         security.\n"
+				sleep 10
+		fi
+	fi
+
+	ISOK="1"
 	echo -e "\t\tPackage List"
 	getfile FILELIST.TXT $TMPDIR/FILELIST.TXT
-
-	if [ -e $TMPDIR/FILELIST.TXT ] && \
-	   [ $(grep -c tgz $TMPDIR/FILELIST.TXT) -gt 1 ]; then
+	if [ "$CHECKPKG" = "on" ]; then
+		CHECKSUMSFILE=$TMPDIR/CHECKSUMS.md5
+		ISOK=$(checkmd5 $TMPDIR/FILELIST.TXT)
+	fi
+	if [ "$ISOK" = "1" ]; then 
+		if ! [ -e $WORKDIR/LASTUPDATE ]; then
+			echo "742868196" > $WORKDIR/LASTUPDATE
+		fi
+		LASTUPDATE=$(cat $WORKDIR/LASTUPDATE)
+		ACTUALDATE=$(date -d "$(head -1 $TMPDIR/FILELIST.TXT)" "+%s")
+		if [ $ACTUALDATE -lt $LASTUPDATE ]; then
+			echo -e "\
+\n\t\tFILELIST.TXT seems to be older than the last one.\n\
+\t\tDo you really want to continue (y/N)? \c"
+			answer
+			if [ "$ANSWER" != "Y" ] && [ "$ANSWER" != "y" ]; then
+				cleanup
+			fi
+			echo
+		fi
+		echo $ACTUALDATE > $WORKDIR/LASTUPDATE
+	else
+		rm $TMPDIR/FILELIST.TXT
+	fi
+	
+	if [ -e $TMPDIR/CHECKSUMS.md5 ]; then
+		FILELIST="$TMPDIR/CHECKSUMS.md5"
+	elif [ -e $TMPDIR/FILELIST.TXT ]; then
+		if [ "$ISOK" = "0" ]; then
+			echo -e "\
+\n\t\tERROR: CHECKSUMS.md5 signature doesn't match!\n\
+\t\t       We strongly recommend that you change your mirror\n\
+\t\t       to prevent security problems.\n"
+			cleanup
+		fi
+		sleep 10
 	  	FILELIST="$TMPDIR/FILELIST.TXT"
 	else
-		CHECKPKG="on"
-		FILELIST="$TMPDIR/CHECKSUMS.md5"
+		echo -e "\
+\n\t\tERROR: No CHECKSUMS.md5 and no FILELIST.TXT.\n\
+\t\t       We strongly recommend that you change your mirror\n\
+\t\t       to prevent security problems.\n"
+		cleanup
 	fi 
 
-	if [ "$CHECKPKG" = "on" ]; then
-		echo -e "\t\tChecksums"
-		getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
-	fi
-	cp $TMPDIR/CHECKSUMS.md5 $WORKDIR/CHECKSUMS.md5
-		
 	# Download all PACKAGES.TXT files
 	# 
 	echo -e "\t\tPackage descriptions"
@@ -675,7 +748,7 @@ function updatefilelists()
 	#
 	echo -e "\tFormatting lists to slackpkg style..."
 	echo -e "\t\tPackage List: using $( basename $FILELIST ) as source"
-	grep "\.tgz" $FILELIST| \
+	grep ".t[blxg]z" $FILELIST| \
 		awk -f /usr/libexec/slackpkg/pkglist.awk |\
 		sed -e 's/^M//g' > ${TMPDIR}/pkglist
 	cp ${TMPDIR}/pkglist ${WORKDIR}/pkglist		
@@ -711,6 +784,15 @@ function updatefilelists()
 		cat $TMPDIR/${i}-PACKAGES.TXT >> $TMPDIR/PACKAGES.TXT
 	done
 	cp $TMPDIR/PACKAGES.TXT ${WORKDIR}/PACKAGES.TXT
+
+	if [ -e $TMPDIR/CHECKSUMS.md5 ]; then
+		cp $TMPDIR/CHECKSUMS.md5 $WORKDIR/CHECKSUMS.md5 2>/dev/null
+	fi
+
+	if [ -e $TMPDIR/CHECKSUMS.md5.asc ]; then
+		cp $TMPDIR/CHECKSUMS.md5.asc \
+			$WORKDIR/CHECKSUMS.md5.asc 2>/dev/null
+	fi
 }
 
 function sanity_check() {

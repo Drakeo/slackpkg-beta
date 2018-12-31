@@ -1,10 +1,37 @@
 ChangeLog
 ---------
 
+2009 Wed Apr 15
+---------------
+	- Fix problem in checking md5 of some packages
+	- Fix pkglist.awk script. The changes to support
+	  tbz, tlz and txz brokes the local package list.
+	- 2.71beta4!! Man, we don't stop!
+
+2009 Fri Apr 10
+---------------
+	- Now use CHECKSUMS.md5 as primary source of package
+	  names.
+	- Check if FILELIST.TXT is newer than last update.
+	  That will prevents you to accidentaly downgrade
+	  your machine using an outdated mirror.
+	- Added a lot of new security checks
+		- check CHECKSUMS.md5 against CHECKSUMS.md5.asc
+		- check FILELIST.TXT against CHECKSUMS.md5
+		- check all downloaded .asc against CHECKSUMS.md5
+			(CHECKSUMS.md5.asc is excluded of this check)
+
+2009 Tue Apr 07
+---------------
+	- Added support to other package extensions.
+	  Now slackpkg can handle tgz, tbz, tlz and txz.
+	  Of course, this depends on pkgtools with the
+	  same capabilities.
+
 2009 Mon Mar 23
 ---------------
 	- Put findutils to be upgraded before glibc-solibs.
-	  I think this is wrong. But for some strange reason is
+	  I think this is wrong. But for some strange reason
 	  findutils brokes if glibc is upgraded first.
 	- Packaged and relased as 2.71beta3 (hope last)
 

@@ -1,7 +1,7 @@
 #!/bin/sh
 #
 # SlackPkg - An Automated packaging tool for Slackware Linux
-# Copyright (C) 2003,2004,2005,2006,2007 Roberto F. Batista, Evaldo Gardenali
+# Copyright (C) 2003-2009 Roberto F. Batista, Evaldo Gardenali
 #
 # This program is free software; you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.71beta3
+VERSION=2.71beta4
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 SLACKKEY="Slackware Linux Project <security@slackware.com>"
@@ -41,6 +41,7 @@ SOURCE=$(grep -e "^\([a-z]\)" $CONF/mirrors)
 . $CONF/slackpkg.conf
 ARCH=${ARCH:-i[3456]86}
 LOCAL=0
+CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
 KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
 TMPDIR=$(mktemp -p /tmp -d slackpkg.XXXXXX 2>/dev/null || echo "FAILED")
 if [ "$TMPDIR" = "FAILED" ]; then
@@ -418,7 +419,7 @@ The list below shows all packages with the selected pattern.\n"
 			BASENAME="$(cutpkg ${i})"
 
 			# RAWNAME is Latest available version  
-			RAWNAME="$(basename ${i} .tgz)"
+			RAWNAME="${i/.t[blxg]z/}"
 
 			# Default is uninstalled
 			STATUS="uninstalled"
