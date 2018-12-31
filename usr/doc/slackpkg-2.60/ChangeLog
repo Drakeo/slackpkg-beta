@@ -1,6 +1,25 @@
 ChangeLog
 ---------
 
+2007 Wed May 02
+---------------
+	- Added fontconfig in the hardcoded install-new packages
+	- Make install-new to search only in the main slackware
+	  series. No more /extra and /pasture packages
+	- Changes in dialog functions. To prevent some strange
+	  errors we use grep -m1 to use only the first match
+	  and --file in dialog to prevent bizarre xargs
+	  errors (reported by many)
+	- Fixes in sanity-check function to discover
+	  duplicated packages. (Thanks Sasha Alexandr)
+
+2007 Sat Mar 17
+---------------
+	- Change VERSION to 2.52 instead 2.52beta
+	- Added a test do detect old slackpkg.conf versions
+	- Added hardcoded dialog and aaa_terminfo in install-new
+	- Released slackpkg 2.52!!
+
 2007 Mon Mar 12 
 ---------------
 	- Changing NOGPG to CHECKGPG. Is more coherent with the other

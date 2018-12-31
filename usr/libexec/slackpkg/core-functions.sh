@@ -29,6 +29,17 @@ trap 'cleanup' 2 14 15 		# trap CTRL+C and kill
 # Syntax Checking
 #
 function system_checkup() {
+	# Check if the config files are updated to the new slackpkg version
+	#
+	if [ "$WORKDIR" = "" ]; then
+		echo -e "\
+\nYou need to upgrade your slackpkg.conf.\n\
+This is a new slackpkg version and many changes happens in config files.\n\
+In ${CONF}/slackpkg.conf.new there is a sample of the new configuration.\n\
+\nAfter update your configuration run: slackpkg update\n" 
+		cleanup
+	fi
+
 	# Checking if another instance of slackpkg is running
 	#
 	if [ "`ls /var/lock/slackpkg.* 2>/dev/null`" ] && \
@@ -398,7 +409,7 @@ function makelist() {
 		;;
 		install-new)
 			for i in `awk -f /usr/libexec/slackpkg/install-new.awk ${WORKDIR}/ChangeLog.txt |\
-				  sort -u `; do
+				  sort -u ` dialog aaa_terminfo fontconfig ; do
 	
 				givepriority $i
 				[ ! "$FULLNAME" ] && continue
@@ -623,7 +634,7 @@ function sanity_check() {
 		mv /var/log/packages/${i} /var/log/packages/${REVNAME}
 		mv /var/log/scripts/${i} /var/log/scripts/${REVNAME}
 	done 
-	for i in `ls -1 /var/log/packages | egrep '\-[^\.]+$'`; do
+	for i in `ls -1 /var/log/packages | egrep "^.*-(${ARCH}|noarch)-[^-]+$"`; do
 		cutpkg $i
 	done | sort > $TMPDIR/list1
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2

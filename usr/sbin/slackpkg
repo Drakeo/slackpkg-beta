@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.52beta
+VERSION=2.52
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=`cat /etc/slackware-version | cut -f2 -d\ `
 SLACKKEY="Slackware Linux Project <security@slackware.com>"

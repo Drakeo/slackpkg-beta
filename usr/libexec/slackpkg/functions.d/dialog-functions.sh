@@ -16,13 +16,13 @@ if [ "$DIALOG" = "on" ] || [ "$DIALOG" = "ON" ]; then
 			ls -1 /var/log/packages > $TMPDIR/tmplist
 			for i in $1; do
 				BASENAME=`cutpkg $i`
-				PKGFOUND=`grep -e "^${BASENAME}-[^-]\+-\(noarch\|${ARCH}\)" $TMPDIR/tmplist`.tgz
-				echo "$i '' $ONOFF 'currently installed: $PKGFOUND'" >>$TMPDIR/dialog.tmp
+				PKGFOUND=`grep -m1 -e "^${BASENAME}-[^-]\+-\(noarch\|${ARCH}\)" $TMPDIR/tmplist`.tgz
+				echo "$i \"\" $ONOFF \"currently installed: $PKGFOUND\"" >>$TMPDIR/dialog.tmp
 			done
 			HINT="--item-help"
 		else
 			for i in $1; do
-				echo "$i '' $ONOFF" >>$TMPDIR/dialog.tmp
+				echo "$i \"\" $ONOFF" >>$TMPDIR/dialog.tmp
 			done
 			HINT=""
 		fi
@@ -31,7 +31,7 @@ if [ "$DIALOG" = "on" ] || [ "$DIALOG" = "ON" ]; then
 			awk '{ NF=3 ; print $0 }' $TMPDIR/dialog2.tmp > $TMPDIR/dialog.tmp
 			HINT=""
 		fi
-		cat $TMPDIR/dialog.tmp|xargs dialog --title $2 --backtitle "slackpkg $VERSION" $HINT --checklist "Choose packages to $2:" 19 70 13 2>$TMPDIR/dialog.out
+		dialog --title $2 --backtitle "slackpkg $VERSION" $HINT --checklist "Choose packages to $2:" 19 70 13 --file $TMPDIR/dialog.tmp 2>$TMPDIR/dialog.out
 		dialog --clear
 		SHOWLIST=`cat $TMPDIR/dialog.out | tr -d \"`
 		rm -f $TMPDIR/dialog.*
