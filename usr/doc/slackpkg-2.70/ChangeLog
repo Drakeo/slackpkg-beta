@@ -1,6 +1,13 @@
 ChangeLog
 ---------
 
+2008 Mon Jan 28
+---------------
+	- Fix problem with duplicated packages in package list
+			(reported by gar0t0)
+	- Fixed pattern matching problems with g++ and other packages
+	  with special characters. (reported by gar0t0)
+
 2008 Tue Jan 22
 ---------------
 	- Better error handling in update from wrong mirrors
@@ -8,8 +15,8 @@ ChangeLog
 
 2008 Mon Jan 21
 ---------------
-	- Fixed install-new problem. Some packages are missing
-	  from install-new list.
+	- Fixed install-new ChangeLog parsing problem. 
+	  Some packages are missing from install-new list.
 
 2008 Sat Jan 19
 ---------------

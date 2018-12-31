@@ -432,7 +432,7 @@ function makelist() {
 			done
 		;;
 	esac
-	LIST=$(echo -e $LIST | tr \  "\n")
+	LIST=$(echo -e $LIST | tr \  "\n" | uniq )
 	echo -e "DONE\n"
 }
 

@@ -373,10 +373,11 @@ case "$CMD" in
 		blacklist_pkg
 	;;
 	"search")
+		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g'`
 		# Search filelist.gz for possible matches
 		for i in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
 			if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
-				PKGS="$(zegrep $INPUTLIST ${WORKDIR}/${i}-filelist.gz | \
+				PKGS="$(zegrep $PATTERN ${WORKDIR}/${i}-filelist.gz | \
 					cut -d\  -f 1 | awk -F'/' '{print $NF}')"
 				for j in $PKGS ; do
 					NEWONE=`cutpkg ${j}`
@@ -430,7 +431,8 @@ The list below shows all packages with the selected pattern.\n"
 		fi
 	;;
 	"info")
-		NAME=$(cutpkg $INPUTLIST)
+		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`
+		NAME=$(cutpkg $PATTERN)
 		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|noarch)-[[:digit:]]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
