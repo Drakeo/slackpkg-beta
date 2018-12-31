@@ -34,9 +34,9 @@ function system_checkup() {
 	if [ "$WORKDIR" = "" ]; then
 		echo -e "\
 \nYou need to upgrade your slackpkg.conf.\n\
-This is a new slackpkg version and many changes happens in config files.\n\
-In ${CONF}/slackpkg.conf.new there is a sample of the new configuration.\n\
-\nAfter update your configuration run: slackpkg update\n" 
+This is a new slackpkg version and many changes happened in config files.\n\
+In ${CONF}/slackpkg.conf.new, there is a sample of the new configuration.\n\
+\nAfter updating your configuration file, run: slackpkg update\n" 
 		cleanup
 	fi
 
@@ -45,8 +45,8 @@ In ${CONF}/slackpkg.conf.new there is a sample of the new configuration.\n\
 	if [ "`ls /var/lock/slackpkg.* 2>/dev/null`" ] && \
 		[ "$CMD" != "search" ]; then
 		echo -e "\
-\nAnother instance of slackpkg is running. If this isn't true, you can remove\n\
-/var/lock/slackpkg.* files and run slackpkg again.\n"
+\nAnother instance of slackpkg is running. If this is not correct, you can\n\
+remove /var/lock/slackpkg.* files and run slackpkg again.\n"
 		cleanup
 	else        
 		ls /var/lock/slackpkg.* &>/dev/null || \
@@ -57,9 +57,10 @@ In ${CONF}/slackpkg.conf.new there is a sample of the new configuration.\n\
 	#
 	if [ "$TMPDIR" = "FAILED" ]; then
 		echo -e "\
-\nSome problem writing slackpkg's temporary dir in /tmp.\n\
-Probably you don't had permissions to wrote on /tmp or it's full.\n\
-Fix it and run slackpkg again.\n"
+\nA problem was encountered writing to slackpkg's temporary dir in /tmp.\n\
+Check to ensure you have permissions to write in /tmp and make sure the\n\
+filesystem is not out of free space.  Run slackpkg again after correcting\n\
+the problem.\n"
 		cleanup
 	fi
 
@@ -67,9 +68,9 @@ Fix it and run slackpkg again.\n"
 	#                                               
 	if ! [ -f ${WORKDIR}/pkglist ] && [ "$CMD" != "update" ]; then
 		echo -e "\
-\nHey! Probably this is the first time you are running slackpkg.\n\
-Before install|upgrade|reinstall anything, you need to uncomment\n\
-one mirror in ${CONF}/mirrors and run:\n\n\
+\nThis appears to be the first time you have run slackpkg.\n\
+Before you install|upgrade|reinstall anything, you need to uncomment\n\
+ONE mirror in ${CONF}/mirrors and run:\n\n\
 \t# slackpkg update\n\n\
 You can see more information about slackpkg functions in slackpkg manpage."
 		cleanup
@@ -80,50 +81,38 @@ You can see more information about slackpkg functions in slackpkg manpage."
 	#                                                         
 	if [ "$SOURCE" = "" ]; then
 		echo -e "\
-\nYou don't have any mirror selected in ${CONF}/mirrors\n\
-Please, edit that file and uncomment one mirror. Slackpkg\n\
+\nYou do not have any mirror selected in ${CONF}/mirrors\n\
+Please edit that file and uncomment ONE mirror.  Slackpkg\n\
 only works with ONE mirror selected.\n"
 		cleanup
 	else
 		COUNT=`echo $SOURCE | wc -w | tr -d " "`
 		if [ "$COUNT" != "1" ]; then
 			echo -e "\n\
-Slackpkg only works with ONE mirror selected. Please, edit your\n\
-${CONF}/mirrors and comment one or more lines. Two or more\n\
-mirrors uncommented isn't valid syntax.\n"
+Slackpkg only works with ONE mirror selected.  Please edit your\n\
+${CONF}/mirrors and comment all but one line - two or more\n\
+mirrors uncommented is not valid syntax.\n"
 			cleanup
 		fi
 	fi
 
 	# It will check if the mirror selected are ftp.slackware.com
-	# if are "ftp.slackware.com" tell to the user to choice other
+	# if set to "ftp.slackware.com" tell the user to choose another
 	#
 	if echo ${SOURCE} | grep "^ftp://ftp.slackware.com" &>/dev/null ; then
 		echo -e "\n\
-Please, use one of the mirrors.\n\
-ftp.slackware.com should be preserved so the\n\
-mirrors can be kept up-to-date.\n"
+Please use one of the mirrors.\n\
+ftp.slackware.com should be reserved so that the\n\
+official mirrors can be kept up-to-date.\n"
 		cleanup
 	fi
 
-	# Command line syntax checking 
-	#
-	if [ "$#" = "0" ]; then
-		usage
-	fi
-
-	if [ "$#" = "1" ] && [ "$CMD" != "update" ] && \
-		[ "$CMD" != "upgrade-all" ] && [ "$CMD" != "install-new" ] && \
-		[ "$CMD" != "blacklist" ] && [ "$CMD" != "clean-system" ]; then
-		usage
-	fi
-	
-	# Checking if the user have the permissions to install/upgrade/update
+	# Checking if the user has the permissions to install/upgrade/update
 	#                                                                    
 	if [ "`id -u`" != "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ]; then
 		echo -e "\n\
-Only root can install, upgrade or remove packages.\n\
-Please, log as root or call your system administrator.\n"
+Only root can install, upgrade, or remove packages.\n\
+Please log in as root or contact your system administrator.\n"
 		cleanup
 	fi          
 
@@ -135,6 +124,14 @@ Please, log as root or call your system administrator.\n"
 		LOCAL=1
 	fi
 
+	# Check if the "which" command is there
+	if ! which which 1>/dev/null 2>/dev/null ; then
+		echo -e "\n\
+No 'which' command found, please install it if you want to\n\
+use slackpkg.\n"
+		cleanup
+	fi
+
 	# Check if we have md5sum in the PATH. Without md5sum, disables
 	# md5sum checks
 	#
@@ -144,7 +141,7 @@ Please, log as root or call your system administrator.\n"
 		[ "$CMD" != "update" ] && \
 		[ "$CHECKPKG" = "on" ]; then
 		echo -e "\n\
-No CHECKSUMS.md5 found! Please, disable md5sums checking\n\
+No CHECKSUMS.md5 found!  Please disable md5sums checking\n\
 on your ${CONF}/slackpkg.conf or run slackpkg update\n\
 to download a new CHECKSUMS.md5 file.\n"
 		cleanup
@@ -154,8 +151,8 @@ to download a new CHECKSUMS.md5 file.\n"
 	#
 	if ! [ "$(which awk 2>/dev/null)" ]; then
 		echo -e "\n\
-No awk found! Please, install awk before you run slackpkg.\n\
-Without awk, slackpkg doesn't work in any way.\n"
+awk package not found! Please install awk before you run slackpkg,\n\
+as slackpkg cannot function without awk.\n"
 		cleanup
 	fi
 
@@ -164,10 +161,11 @@ Without awk, slackpkg doesn't work in any way.\n"
 	if ! [ "$(which gpg 2>/dev/null)" ] && [ "${CHECKGPG}" = "on" ]; then
 		CHECKGPG=off
 		echo -e "\n\
-No gpg found!!! Please, disable GPG in ${CONF}/slackpkg.conf or install\n\
+gpg package not found!  Please disable GPG in ${CONF}/slackpkg.conf or install\n\
 the gnupg package.\n\n\
-To disable GPG, edit slackpkg.conf and add one line with CHECKGPG=off.\n\
-You can see an example in slackpkg.conf.new.\n "
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
+to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
+with slackpkg.\n"
 		sleep 5
 	fi 
 
@@ -181,10 +179,21 @@ You can see an example in slackpkg.conf.new.\n "
 You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
 \t# slackpkg update gpg\n\n\
-You can disable GPG checking, too. But it isn't a good idea.\n\
-To disable GPG, edit slackpkg.conf and add one line with CHECKGPG=off.\n\
-You can see an example in slackpkg.conf.new.\n"
+You can disable GPG checking too, but it is not a good idea.\n\
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
+to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
+with slackpkg.\n"
 		cleanup
+	fi
+
+	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
+		DIALOG=off
+		MORE=cat
+		if [ "$DEFAULT_ANSWER" = "" ]; then
+			DEFAULT_ANSWER=n
+		fi
+	else
+		MORE=more
 	fi
 	echo 
 }
@@ -215,27 +224,29 @@ slackpkg - version $VERSION\n\
 \t\t\t\t\talready installed
 \tslackpkg remove package\t\tremove installed packages
 \tslackpkg clean-system\t\tremove all packages which are not 
-\t\t\t\t\tpresent in slackware distribution.
+\t\t\t\t\tpresent in the official Slackware package set.
 \t\t\t\t\tGood to keep the house in order
 \tslackpkg upgrade-all\t\tsync all packages installed in your 
 \t\t\t\t\tmachine with the selected mirror. This
-\t\t\t\t\tis the "true" way to upgrade all your 
-\t\t\t\t\tmachine.
-\tslackpkg install-new\t\tinstall packages which are added in
-\t\t\t\t\tslackware distribution. 
+\t\t\t\t\tis the "correct" way to upgrade all of 
+\t\t\t\t\tyour machine.
+\tslackpkg install-new\t\tinstall packages which are added to
+\t\t\t\t\tthe official Slackware package set.
 \t\t\t\t\tRun this if you are upgrading to another
-\t\t\t\t\tslackware version or using "current".
+\t\t\t\t\tSlackware version or using "current".
 \tslackpkg blacklist\t\tBlacklist a package. Blacklisted
-\t\t\t\t\tpackages cannot be upgraded, installed
+\t\t\t\t\tpackages cannot be upgraded, installed,
 \t\t\t\t\tor reinstalled by slackpkg
-\tslackpkg download\t\tJust download (do not install) a package
+\tslackpkg download\t\tOnly download (do not install) a package
 \tslackpkg info package\t\tShow package information 
 \t\t\t\t\t(works with only ONE package)
 \tslackpkg search file\t\tSearch for a specific file in the
 \t\t\t\t\tentire package collection
+\tslackpkg new-config\t\tSearch for new configuration files and
+\t\t\t\t\task to user what to do with them.
 \nYou can see more information about slackpkg usage and some examples
 in slackpkg's manpage. You can use partial package names (such as x11
-instead x11-devel, x11-docs, etc), or even slackware series
+instead x11-devel, x11-docs, etc), or even Slackware series
 (such as "n","ap","xap",etc) when searching for packages.
 "
 	cleanup
@@ -318,16 +329,16 @@ function makelist() {
 
 	case "$CMD" in
 		clean-system)
-			echo -n "Looking for packages to remove. Please, wait... "
+			echo -n "Looking for packages to remove. Please wait... "
 		;;
 		upgrade-all)
-			echo -n "Looking for packages to upgrade. Please, wait... "
+			echo -n "Looking for packages to upgrade. Please wait... "
 		;;
 		install-new)
-			echo -n "Looking for NEW packages to install. Please, wait... "
+			echo -n "Looking for NEW packages to install. Please wait... "
 		;;
 		*)
-			echo -n "Looking for $(echo $INPUTLIST | tr -d '\\') in package list. Please, wait... "
+			echo -n "Looking for $(echo $INPUTLIST | tr -d '\\') in package list. Please wait... "
 		;;
 	esac
 
@@ -429,7 +440,16 @@ function countpkg() {
 	local COUNTPKG=`echo -e "$1" | wc -w`
 
 	if [ "$COUNTPKG" != "0" ]; then
-		echo -e "Total of package(s): $COUNTPKG\n"
+		echo -e "Total package(s): $COUNTPKG\n"
+	fi
+}
+
+function answer() {
+	if [ "$BATCH" = "on" ]; then
+		ANSWER="$DEFAULT_ANSWER"
+		echo $DEFAULT_ANSWER
+	else
+		read ANSWER
 	fi
 }
 
@@ -440,10 +460,11 @@ function showlist() {
 	local ANSWER
 	local i
 
-	for i in $1; do echo $i; done | more 
+	for i in $1; do echo $i; done | $MORE 
 	echo
 	countpkg "$1"
-	echo -e "Do you wish to $2 selected packages (Y/n)? \c"; read ANSWER
+	echo -e "Do you wish to $2 selected packages (Y/n)? \c"
+	answer
 	if [ "$ANSWER" = "N" -o "$ANSWER" = "n" ]; then
 		cleanup
 	else
@@ -501,7 +522,7 @@ function getpkg() {
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
 		fi
 	else
-		echo -e "\tPackage $1 is already in cache, not downloading" 
+		echo -e "\tPackage $1 is already in cache - not downloading" 
 	fi
 
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
@@ -570,7 +591,7 @@ function updatefilelists()
 		echo -e "\
 \n\t\tNo changes in ChangeLog.txt between your last update and now.\n\
 \t\tDo you really want to download all other files (y/N)? \c"
-		read ANSWER
+		answer
 		if [ "$ANSWER" != "Y" ] && [ "$ANSWER" != "y" ]; then
 			cleanup
 		fi
@@ -663,17 +684,17 @@ function sanity_check() {
 	fi
 	if [ "$DOUBLEFILES" != "" ]; then
 		echo -e "\
-You have a broked /var/log/packages, with two versions of the same package.\n\
-The list of packages duplicated in your machine are show below, but don't\n\
-worry about this list, when you select your action, slackpkg will show a\n\
+You have a broken /var/log/packages - with two versions of the same package.\n\
+The list of packages duplicated in your machine are shown below, but don't\n\
+worry about this list - when you select your action, slackpkg will show a\n\
 better list:\n"
 		for i in $DOUBLEFILES ; do
 			ls -1 /var/log/packages |\
 				egrep -i -- "^${i}-[^-]+-(${ARCH}|noarch)-"
 		done
 		echo -ne "\n\
-You can (B)lacklist or (R)emove these packages.\n\
-Select your action (B/R): "
+You can (B)lacklist, (R)emove, or (I)gnore these packages.\n\
+Select your action (B/R/I): "
 		read ANSWER
 		echo
 		case "$ANSWER" in
@@ -692,7 +713,7 @@ Select your action (B/R): "
 			;;
 			*)
 				echo -e "\n\
-Ok! slackpkg won't do anything now. But, please, do something to fix it.\n"
+Okay - slackpkg won't do anything now, but please, do something to fix it.\n"
 				cleanup
 			;;
 		esac

@@ -45,7 +45,7 @@ You have four choices:
 	(P)rompt K, O, R selection for every single file
 	
 What do you want (K/O/R/P)?"
-		read ANSWER
+		answer	
 		case $ANSWER in
 			K|k)
 				break

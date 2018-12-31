@@ -1,6 +1,46 @@
 ChangeLog
 ---------
 
+2008 Wed Jan 09
+---------------
+	- A new command line parser, much better than the older one.
+	  Now you can override slackpkg.conf configurations from
+	  command line:
+
+		slackpkg -checkpkg=off upgrade-all
+
+	  Will disable the checkpkg feature. Many slackpkg.conf
+	  can be overrided using that. You can also specify a
+	  different mirror, using -mirror=URL/
+	- Additional check to see if "which" is there
+	- Added "new-config" option, it will search for .new files
+	  and ask to user what to do with them.
+
+2008 Wed Jan 07
+---------------
+	- Added BATCH and DEFAULT_ANSWER options in slackpkg.conf,
+	  you can use those two to make automated upgrades without
+	  human intervention.
+
+2008 Wed Jan 04
+---------------
+	- Fixes in install-new.awk to catch more new packages
+
+2007 Sat Jun 09
+---------------
+	- Removed "httpd" from the hardcoded list. It isn't needed.
+	- Released the 2.61
+
+2007 Tue Jun 05
+---------------
+	- Fixes in almost all slackpkg messages and in README file
+				(Thanks Robby Workman!)
+	- Included (I) to ignore duplicated files... well, this can
+	  burn your computer... but who am I to don't let you do that?
+				(Thanks Robby Workman, again)
+	- Included httpd in hardcoded install-new files.
+	- Bumped the version number to 2.61
+
 2007 Sun May 27
 ---------------
 	- Back to the xargs combo in dialog-functions. --file doesn't 

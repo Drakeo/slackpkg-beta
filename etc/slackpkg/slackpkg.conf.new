@@ -1,6 +1,6 @@
 #
 # slackpkg.conf - Configuration for SlackPkg
-# v2.0
+# v2.1
 #
 
 #
@@ -95,6 +95,16 @@ DOWNLOAD_ALL=off
 
 # Enables (on) or disables (off) the dialog interface in slackpkg.  Default=on
 DIALOG=on
+
+# Enables (on) or disable (off) the non-interactive mode. Using that,
+# slackpkg will run without ask anything to user, and answering all
+# questions with DEFAULT_ANSWER. If you do some upgrade using this mode,
+# you'll need to run "slackpkg new-config" later, to find and merge
+# .new files.
+BATCH=off
+
+# Default answer to slackpkg questions. Can be "y" or "n".
+DEFAULT_ANSWER=n
 
 #
 # The MIRROR is set from /etc/slackpkg/mirrors

@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.60
+VERSION=2.70beta
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=`cat /etc/slackware-version | cut -f2 -d\ `
 SLACKKEY="Slackware Linux Project <security@slackware.com>"
@@ -48,21 +48,161 @@ if [ "$TMPDIR" = "FAILED" ]; then
 	mkdir -m 700 $TMPDIR || TMPDIR="FAILED"
 fi
 ERROR=""
-CMD=$1
 
 #
 # Load the slackpkg functions
 #
 . /usr/libexec/slackpkg/core-functions.sh
 
+#========================================================================
 #
-# Load *extra* functions and modules to slackpkg
+# COMMAND LINE PARSING 
 #
-# if you want a new function or need a rewrite of one existing
-# feature, you can put your new function in a shell script, under
-# /usr/libexec/slackpkg/functions.d
+if [ $# -eq 0 ]; then
+  usage
+fi
+
+while [ -n "$1" ] ; do
+  case $1 in
+    -delall=on)
+      DELALL=on
+      shift
+    ;;
+    -delall=off)
+      DELALL=off
+      shift
+    ;;
+    -checkpkg=on)
+      CHECKPKG=on
+      shift
+    ;;
+    -checkpkg=off)
+      CHECKPKG=off
+      shift
+    ;;
+    -checkgpg=on)
+      CHECKGPG=on
+      shift
+    ;;
+    -checkgpg=off)
+      CHECKGPG=off
+      shift
+    ;;
+    -postinst=on)
+      POSTINST=on
+      shift
+    ;;
+    -postinst=off)
+      POSTINST=off
+      shift
+    ;;
+    -onoff=on)
+      ONOFF=on
+      shift
+    ;;
+    -onoff=off)
+      ONOFF=off
+      shift
+    ;;
+    -download_all=on)
+      DOWNLOAD_ALL=on
+      shift
+    ;;
+    -download_all=off)
+      DOWNLOAD_ALL=off
+      shift
+    ;;
+    -dialog=on)
+      DIALOG=on
+      shift
+    ;;
+    -dialog=off)
+      DIALOG=off
+      shift
+    ;;
+    -batch=on)
+      BATCH=on
+      shift
+    ;;
+    -batch=off)
+      BATCH=off
+      shift
+    ;;
+    -default_answer=y|-default_answer=yes)
+      DEFAULT_ANSWER=y
+      shift
+    ;;
+    -default_answer=n|-default_answer=no)
+      DEFAULT_ANSWER=n
+      shift
+    ;;
+    -mirror=*)
+	SOURCE=`echo $1 | cut -f2 -d=`
+	shift
+    ;; 
+    install|reinstall|upgrade|remove|search|blacklist|info)
+      CMD=$1
+      shift
+      if [ -n "$1" ]; then
+        if echo $1 | egrep -q "^\.{0,2}/" ; then
+		if [ -e $1 ]; then
+			INPUTLIST=`cat $1 | tr "\n" " "`
+		else
+			echo -e "The file $1 doesn't exist.\n"
+			cleanup
+		fi
+        else
+		#
+		# Sanitize the argument. We have some problems with dots 
+		# and plus (.+)
+		#
+		#INPUTLIST="`echo $@ | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`"
+		INPUTLIST="$@"
+        fi
+      elif [ "$CMD" != "blacklist" ]; then
+        usage
+      fi
+      shift $#
+    ;;
+    update)
+      CMD=$1
+      shift
+      if [ "$1" = "gpg" ]; then
+        UPARG="$1"
+        shift
+      fi
+    ;;
+    install-new|upgrade-all|clean-system|new-config)
+      CMD=$1
+      shift
+      if [ -n "$1" ]; then
+	echo -e "\n$CMD: Ignoring extra arguments."
+        shift $#
+      fi
+    ;;
+    *)
+	echo -e "\n$1: Unknown option.\n"
+	usage
+    ;;
+  esac
+done
+
+#========================================================================
 #
-# Remember, the new function scripts needs to be executable
+# SYNTAX CHECKING
+#
+system_checkup
+
+#========================================================================
+#
+# READ EXTRA FUNCTIONS 
+#
+
+# If you want a new function or need a rewrite of an existing
+# feature, you can put your new function in a shell script under
+# /usr/libexec/slackpkg/functions.d/
+#
+# Remember - the new function scripts need to be executable
 #
 for i in /usr/libexec/slackpkg/functions.d/*; do
 	if [ -x $i ]; then
@@ -72,30 +212,8 @@ done
 
 #========================================================================
 #
-# SYNTAX CHECKING
-#
-system_checkup $@
-shift
-if echo $1 | egrep -q "^\.{0,2}/" ; then
-	if [ -e $1 ]; then
-		INPUTLIST=`cat $1 | tr "\n" " "`
-	else
-		echo -e "The file $1 doesn't exist.\n"
-		cleanup
-	fi
-else
-	INPUTLIST=$@
-fi
-
-#========================================================================
-#
 # MAIN PROGRAM
 #
-
-#
-# Sanitize the argument. We have some problems with dots and plus (.+)
-#
-PATTERN="`echo $1 | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`"
 
 #
 # A *BIG* case with all slackpkg commands -:)
@@ -106,7 +224,7 @@ case "$CMD" in
 		# doesn't have Slackware GPG key, download and install
 		# the key
 		#
-		if [ "$PATTERN" = "gpg" ] || [ "$GPGFIRSTTIME" = "0" ]; then
+		if [ "$UPARG" = "gpg" ] || [ "$GPGFIRSTTIME" = "0" ]; then
 			#
 			# Creates .gnupg directory if doesn't exist
 			# without this dir, gpg got an error.
@@ -175,7 +293,7 @@ case "$CMD" in
 	"remove")
 		makelist $INPUTLIST
 		if [ "$LIST" = "" ]; then
-			echo -e "The file $CMD can't be removed, package not installed.\n"
+			echo -e "The file $CMD can't be removed - package not installed.\n"
 			cleanup
 		fi
 		showlist "$LIST" $CMD
@@ -323,9 +441,12 @@ The list below shows all packages with the selected pattern.\n"
                         }
                         END {
 				if ( found != 1 ) {
-			print \"No packages found! Try:\n\n\tslackpkg search $PATTERN\n\nAnd choose one (and only one package).\n\"
+			print \"No packages found! Try:\n\n\tslackpkg search $PATTERN\n\nand choose one (and ONLY one package).\n\"
 				}
 			}" ${WORKDIR}/PACKAGES.TXT 2>/dev/null
+	;;
+	new-config)
+		POSTINST=on
 	;;
 	*)
 		usage

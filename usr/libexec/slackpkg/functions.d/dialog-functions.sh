@@ -51,7 +51,7 @@ if [ "$DIALOG" = "on" ] || [ "$DIALOG" = "ON" ]; then
 If you want to continue using slackpkg, disable the DIALOG option in
 /etc/slackpkg/slackpkg.conf and try again.
 
-Help us to make slackpkg a better tool, report the bug to slackpkg
+Help us to make slackpkg a better tool - report bugs to the slackpkg
 developers" >> $TMPDIR/error.log
 				cleanup
 			;;
