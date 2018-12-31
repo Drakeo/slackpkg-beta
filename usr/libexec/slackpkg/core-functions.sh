@@ -6,15 +6,15 @@
 # Clean-up tmp and lock files
 #
 function cleanup() {
-	if [ "$ERROR" != "" ]; then
+	if [ -e $TMPDIR/error.log ]; then
 	        echo -e "         
 \n==============================================================================
 WARNING!        WARNING!        WARNING!        WARNING!        WARNING!
 ==============================================================================
-One or more errors occurred while slackpkg was running.                       
-One or more packages most likely could not be installed, or your mirror
-is having problems. It's a good idea recheck your mirror and run slackpkg
-again.
+One or more errors occurred while slackpkg was running:                       
+"
+		cat $TMPDIR/error.log
+		echo -e "
 =============================================================================="
 	fi    
 	echo
@@ -247,7 +247,7 @@ function checkpkg() {
 	local MD5ORIGINAL
 	local MD5DOWNLOAD
 
-	MD5ORIGINAL=`grep "${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ `
+	MD5ORIGINAL=`grep "/${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ `
 	MD5DOWNLOAD=`md5sum ${TEMP}/${1} | cut -f1 -d \ `
 	if [ "$MD5ORIGINAL" = "$MD5DOWNLOAD" ]; then
 		echo 1 
@@ -466,13 +466,14 @@ function getfile() {
 #
 function getpkg() {
 	local ISOK="1"
+	local ERROR=""
 	local PKGNAME=( `grep -w -m 1 -- "$1" ${WORKDIR}/pkglist` )
 	local FULLPATH
 
 	NAMEPKG=${PKGNAME[5]}
 	FULLPATH=${PKGNAME[6]}
 
-	if [ "`ls ${TEMP}/$1 2>/dev/null`" = "" ]; then
+	if ! [ -e ${TEMP}/$1 ]; then
 		echo -e "\nPackage: $1"
 		# Check if the mirror are local, if is local, copy files 
 		# to TEMP else, download packages from remote host and 
@@ -491,6 +492,12 @@ function getpkg() {
 				wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
 			fi
 		fi
+
+		if ! [ -e $TEMP/$1 ]; then
+			ERROR="Not found"
+			ISOK="0"
+			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
 	else
 		echo -e "\tPackage $1 is already in cache, not downloading" 
 	fi
@@ -498,17 +505,23 @@ function getpkg() {
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
 	# packages md5sum to detect if they are corrupt or not
 	#
-	if [ "$CHECKPKG" = "on" ]; then
+	if [ "$CHECKPKG" = "on" ] && [ "$ISOK" = "1" ]; then
 		ISOK=`checkpkg $1`
-		[ "$ISOK" = "0" ] && ERROR="md5sum"
+		if [ "$ISOK" = "0" ]; then 
+			ERROR="md5sum"
+			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
 	fi
 
 	# Check the package against its .asc. If you don't like this
 	# disable GPG checking in /etc/slackpkg/slackpkg.conf
 	#
-	if [ "$CHECKGPG" = "on" ]; then
+	if [ "$CHECKGPG" = "on" ] && [ "$ISOK" = "1" ]; then
 		ISOK=`checkgpg $1`
-		[ "$ISOK" = "0" ] && ERROR="gpg"
+		if [ "$ISOK" = "0" ]; then 
+			ERROR="gpg"
+			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
+		fi
 	fi
 
 	if [ "$ISOK" = "1" ]; then
@@ -523,8 +536,8 @@ function getpkg() {
 				echo -e "\c"
 			;;
 		esac	
-		( cd $TEMP && $2 $1 ) 
-	else
+		( cd $TEMP && $2 $1 )
+	else 
 		rm $TEMP/$1 2>/dev/null
 		echo -e "\tERROR - Package not installed! $ERROR error!" 
 	fi

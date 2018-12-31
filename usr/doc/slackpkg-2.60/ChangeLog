@@ -1,6 +1,30 @@
 ChangeLog
 ---------
 
+2007 Tue May 15
+---------------
+	- Added one / before ${NAMEPKG} in check md5sum. It prevents
+	  a match with vim and vim-gvim (and possible other packages)
+	  and subsequent m5sum errors.
+			 (Reported by Diniz Bortolotto)
+	- Swap some "ls" uses by -e to check if one file exists
+	- Changed the way of error treatment. Now we have:
+		. One log of what package gives error
+		. What error happens in each package
+		. Not install one package if the GPG signature
+		  is OK but md5sum isn't (maybe a corrupted
+		  package?)
+		. Shows all logged errors when slackpkg
+		  ends. 
+
+2007 Tue May 08
+---------------
+	- Correct the release date of 2.52
+	- Change version number to 2.60 instead 2.60beta
+	- Added one tip in slackpkg's man page telling about
+	  slackpkg upgrade slackware
+	- Released slackpkg 2.60!!
+
 2007 Wed May 02
 ---------------
 	- Added fontconfig in the hardcoded install-new packages
