@@ -589,6 +589,13 @@ function updatefilelists()
 	# or different from our already existent ChangeLog.txt 
 	#
 	getfile ChangeLog.txt $TMPDIR/ChangeLog.txt
+	if ! grep -q "[a-z]" $TMPDIR/ChangeLog.txt ; then
+		echo -e "\
+\nError downloading from $SOURCE.\n\
+Please, check your mirror and try again."
+		cleanup
+	fi
+
 	if diff --brief ${WORKDIR}/ChangeLog.txt $TMPDIR/ChangeLog.txt ; then
 		echo -e "\
 \n\t\tNo changes in ChangeLog.txt between your last update and now.\n\

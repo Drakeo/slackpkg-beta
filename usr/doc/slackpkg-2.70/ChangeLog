@@ -1,13 +1,36 @@
 ChangeLog
 ---------
 
+2008 Tue Jan 22
+---------------
+	- Better error handling in update from wrong mirrors
+			(problem reported by redhate)
+
+2008 Mon Jan 21
+---------------
+	- Fixed install-new problem. Some packages are missing
+	  from install-new list.
+
+2008 Sat Jan 19
+---------------
+	- Not released. Bugs everywhere
+	- slackpkg info doesn't work (info was using deprecated
+	  PATTERN variable) (reported by redhate)
+	- slackpkg update corrupts file lists and package 
+	  information. Now all the files are first in TMPDIR
+	  before goes to WORKDIR. (reported by redhate)
+	- slackpkg download isn't in new command line parser.
+				(reported by redhate)
+	- Fix all commands to doesn't work without a configured
+	  mirror
+	- Fixed some format errors in "usage"
+
 2008 Fri Jan 18
 ---------------
 	- Fixed an error when checking GPG key. This is caused
 	  by the "backticks" enhancement, reported by many and
 	  fixed by rworkman, many thanks!
 	- No more bug reports in a week, time to release
-	- Relased slackpkg 2.70
 
 2008 Wed Jan 10 
 ---------------
