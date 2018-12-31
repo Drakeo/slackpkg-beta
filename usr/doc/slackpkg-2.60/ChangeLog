@@ -1,6 +1,19 @@
 ChangeLog
 ---------
 
+2007 Sun May 27
+---------------
+	- Back to the xargs combo in dialog-functions. --file doesn't 
+	  works in slackware 10.1.
+	- Fix some bugs in file list generation. Some declarations
+	  like:
+		local VAR=`something`
+	  doens't works well in older bash (in 10.1). This bug
+	  generates a lot of "dialog" bugs. I hope they are fixed
+	  now.
+	- Better error handling in dialog-functions. Now we can
+	  detect when dialog fails and print one error message. 
+
 2007 Tue May 15
 ---------------
 	- Added one / before ${NAMEPKG} in check md5sum. It prevents

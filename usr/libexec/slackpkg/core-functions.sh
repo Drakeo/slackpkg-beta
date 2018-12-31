@@ -467,26 +467,28 @@ function getfile() {
 function getpkg() {
 	local ISOK="1"
 	local ERROR=""
-	local PKGNAME=( `grep -w -m 1 -- "$1" ${WORKDIR}/pkglist` )
+	local PKGNAME
 	local FULLPATH
+	local NAMEPKG
 
+	PKGNAME=( `grep -w -m 1 -- "$1" ${WORKDIR}/pkglist` )
 	NAMEPKG=${PKGNAME[5]}
 	FULLPATH=${PKGNAME[6]}
 
-	if ! [ -e ${TEMP}/$1 ]; then
+	if ! [ -e ${TEMP}/${NAMEPKG} ]; then
 		echo -e "\nPackage: $1"
 		# Check if the mirror are local, if is local, copy files 
 		# to TEMP else, download packages from remote host and 
 		# put then in TEMP
 		#
 		if [ "${LOCAL}" = "1" ]; then 
-                	echo -e "\tCopying $1..."
+                	echo -e "\tCopying $NAMEPKG..."
 			cp ${SOURCE}${FULLPATH}/${NAMEPKG} ${TEMP}
 			if [ "$CHECKGPG" = "on" ]; then
 				cp ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${TEMP}
 			fi
 		else
-                	echo -e "\tDownloading $1..."
+                	echo -e "\tDownloading $NAMEPKG..."
 			wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
 			if [ "$CHECKGPG" = "on" ]; then
 				wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc

@@ -1,6 +1,13 @@
 # Dialog functions
 # Original functions from slackpkg modified by Marek Wodzinski (majek@mamy.to)
 #
+export DIALOG_CANCEL="1"
+export DIALOG_ERROR="126"
+export DIALOG_ESC="1"
+export DIALOG_EXTRA="3"
+export DIALOG_HELP="2"
+export DIALOG_ITEM_HELP="2"
+export DIALOG_OK="0"
 
 # Show the lists and asks if the user want to proceed with that action
 # Return accepted list in $SHOWLIST
@@ -31,8 +38,24 @@ if [ "$DIALOG" = "on" ] || [ "$DIALOG" = "ON" ]; then
 			awk '{ NF=3 ; print $0 }' $TMPDIR/dialog2.tmp > $TMPDIR/dialog.tmp
 			HINT=""
 		fi
-		dialog --title $2 --backtitle "slackpkg $VERSION" $HINT --checklist "Choose packages to $2:" 19 70 13 --file $TMPDIR/dialog.tmp 2>$TMPDIR/dialog.out
-		dialog --clear
+		cat $TMPDIR/dialog.tmp|xargs dialog --title $2 --backtitle "slackpkg $VERSION" $HINT --checklist "Choose packages to $2:" 19 70 13 2>$TMPDIR/dialog.out
+		case "$?" in
+			0|123)
+				dialog --clear
+			;;
+			1|124|125|126|127)
+				dialog --clear
+				echo -e "DIALOG ERROR:\n-------------" >> $TMPDIR/error.log
+				cat $TMPDIR/dialog.out >> $TMPDIR/error.log
+				echo -e "-------------
+If you want to continue using slackpkg, disable the DIALOG option in
+/etc/slackpkg/slackpkg.conf and try again.
+
+Help us to make slackpkg a better tool, report the bug to slackpkg
+developers" >> $TMPDIR/error.log
+				cleanup
+			;;
+		esac
 		SHOWLIST=`cat $TMPDIR/dialog.out | tr -d \"`
 		rm -f $TMPDIR/dialog.*
 		if [ -z "$SHOWLIST" ]; then
