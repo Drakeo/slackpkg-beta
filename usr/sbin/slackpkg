@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.71beta2
+VERSION=2.71beta3
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 SLACKKEY="Slackware Linux Project <security@slackware.com>"
@@ -342,7 +342,7 @@ case "$CMD" in
 				done
 				DELALL="$OLDDEL"
 			fi
-			for i in glibc-solibs readline pkgtools sed; do
+			for i in findutils glibc-solibs readline pkgtools sed; do
 				FOUND=""
 				FOUND=$(echo $SHOWLIST | tr -s ' ' "\n" | grep "${i}-[0-9]")
 				if [ "$FOUND" != "" ]; then 

@@ -1,6 +1,13 @@
 ChangeLog
 ---------
 
+2009 Mon Mar 23
+---------------
+	- Put findutils to be upgraded before glibc-solibs.
+	  I think this is wrong. But for some strange reason is
+	  findutils brokes if glibc is upgraded first.
+	- Packaged and relased as 2.71beta3 (hope last)
+
 2009 Wed Mar 18
 ---------------
 	- Non root users can use "check-updates" command in slackpkg
@@ -13,6 +20,8 @@ ChangeLog
 	  man-page.
 	- Added "check-updates" on slackpkg man-page.
 	- Random fixes in both man-pages.
+	- Fix "check-updates" to be used without Slackware Project GPG
+	  Key imported. (thanks guax)
 
 2009 Sat Mar 14
 ---------------

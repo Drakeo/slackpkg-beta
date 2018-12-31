@@ -177,8 +177,12 @@ with slackpkg.\n"
 	#                                                       
 	GPGFIRSTTIME="$(gpg --list-keys \"$SLACKKEY\" 2>/dev/null \
 			| grep -c "$SLACKKEY")"
-	if [ "$GPGFIRSTTIME" = "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ] && \
-			[ "$CMD" != "update" ] && [ "$CHECKGPG" = "on" ]; then
+	if [ "$GPGFIRSTTIME" = "0" ] && \
+		[ "$CMD" != "search" ] && \
+		[ "$CMD" != "info" ] && \
+		[ "$CMD" != "update" ] && \
+		[ "$CMD" != "check-updates" ] && \
+		[ "$CHECKGPG" = "on" ]; then
 		echo -e "\n\
 You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
