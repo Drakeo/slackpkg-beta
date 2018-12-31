@@ -134,12 +134,12 @@ looknew() {
 	fi
 
 	echo -e "\nSearching for NEW configuration files"
-	FILES=$(find /etc /var/yp /usr/share/vim -name "*.new" ${ONLY_NEW_DOTNEW} \
+	FILES=$(find ${ROOT}/etc ${ROOT}/var/yp ${ROOT}/usr/share/vim -name "*.new" ${ONLY_NEW_DOTNEW} \
 		-not -name "rc.inet1.conf.new" \
 		-not -name "group.new" \
 		-not -name "passwd.new" \
 		-not -name "shadow.new" \
-		-not -name "gshadow.new" 2>/dev/null)
+		-not -name "gshadow.new" 2>/dev/null | sort 2>/dev/null)
 	if [ "$FILES" != "" ]; then
 		echo -e "\n\
 Some packages had new configuration files installed.
@@ -178,7 +178,7 @@ What do you want (K/O/R/P)?"
 					GOEX=0
 					while [ $GOEX -eq 0 ]; do
 						echo
-                                                showmenu $i "(K)eep" "(O)verwrite" "(R)emove" "(D)iff" "(M)erge" "(V)imdiff [dp put, do obtain, ^W^W switch]"
+                                                showmenu $i "(K)eep" "(O)verwrite" "(R)emove" "(D)iff" "(M)erge" "(V)imdiff"
 						read ANSWER
 						case $ANSWER in
 							O|o)
@@ -218,19 +218,26 @@ What do you want (K/O/R/P)?"
 lookkernel() {
 	NEWKERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
 	if [ "$KERNELMD5" != "$NEWKERNELMD5" ]; then
-		if [ -x /sbin/lilo ] && [ -r /etc/lilo.conf ]; then
+		if [ -x /sbin/lilo ] && [ -r /etc/lilo.conf ] && grep -q initrd /etc/lilo.conf ; then
 			echo -e "\n
-Your kernel image was updated.  We highly recommend you run: lilo
-Do you want slackpkg to run lilo now? (Y/n)"
-			answer
-			if [ "$ANSWER" = "y" ] || [ "$ANSWER" = "Y" ]; then
-				/sbin/lilo
-			fi
+Your kernel image was updated, and your /etc/lilo.conf indicates
+the use of an initrd for at least one of your kernels. Be sure to
+regenerate the initrd for the new kernel and handle any needed 
+updates to your bootloader.
+"
+		elif [ -x /sbin/lilo ] && [ -r /etc/lilo.conf ] ; then
+			echo -e "\n
+Your kernel image was updated.  Be sure to handle any needed updates
+to your bootloader.
+"
 		else
 			echo -e "\n
 Your kernel image was updated, and lilo does not appear to be used on 
 your system.  You may need to adjust your boot manager (like GRUB) to 
 boot the appropriate kernel."
 		fi
+		echo -e "\n\n
+Press any key to continue...\n
+"
 	fi
 }
