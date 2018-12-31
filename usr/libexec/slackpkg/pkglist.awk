@@ -1,4 +1,4 @@
-!/source\// && !/.asc/ {
+!/source\// && !/\.asc$/ {
 		INPUT=$NF
 		fs=FS
 		FS="/" ; OFS="/"

@@ -122,7 +122,7 @@ function system_setup() {
 			PKGMAIN=${PKGMAIN:-slackware}
 		;;
 		arm*)
-			ARCH=arm[el]*
+			ARCH=arm[v5tel]*
 			SLACKKEY=${SLACKKEY:-"ARMedslack Security (ARMedslack Linux Project Security) <security@armedslack.org>"}
 			PKGMAIN=${PKGMAIN:-slackware}
 		;;
@@ -269,6 +269,17 @@ mirrors uncommented is not valid syntax.\n"
 Please use one of the mirrors.\n\
 ftp.slackware.com should be reserved so that the\n\
 official mirrors can be kept up-to-date.\n"
+		cleanup
+	fi
+
+	# Also check if the mirror selected is ftp://mirrors.slackware.com
+	# if set to "ftp://mirrors.slackware.com" tell the user to choose another
+	#
+	if echo ${SOURCE} | grep "^ftp://mirrors.slackware.com" &>/dev/null ; then
+		echo -e "\n\
+Please use http://mirrors.slackware.com instead.\n\
+ftp://mirrors.slackware.com does not handle redirects \n\
+to the closest mirror and is very slow.\n"
 		cleanup
 	fi
 
@@ -437,7 +448,7 @@ slackpkg - version $VERSION\n\
 \tslackpkg help\t\t\tShow this screen. 
 \nYou can see more information about slackpkg usage and some examples
 in slackpkg's manpage. You can use partial package names (such as xorg 
-instead xorg-server, xorg-docs, etc), or even Slackware series
+instead of xorg-server, xorg-docs, etc), or even Slackware series
 (such as "n","ap","xap",etc) when searching for packages.
 "
 	cleanup
@@ -448,10 +459,10 @@ instead xorg-server, xorg-docs, etc), or even Slackware series
 function havespace() {
 	local DSIZE
 	local ASIZE
-	DSIZE=$(grep "^${1}/" ${TMPDIR}/tempsize | \
+	DSIZE=$(grep "^${1}" ${TMPDIR}/tempsize | \
 		awk 'BEGIN { tot=0 } { tot+=$2 } END { print int(tot/1024)+1}')
-	ASIZE=$(df /${1} | awk '/% \// { print 0+$(NF-2) }')
-	if [ ${DSIZE} -gt ${ASIZE} ]; then
+	ASIZE=$(df ${1} | awk '/% \// { print 0+$(NF-2) }')
+	if [ ${DSIZE} -gt ${ASIZE} ] ; then
 		ISOK=0
 	fi
 }
@@ -468,12 +479,13 @@ function checksize() {
 		}
 	}' > ${TMPDIR}/tempsize
 
-	for i in $(tac /proc/mounts | grep "^/dev" |cut -f2 -d\ | cut -c2-); do 
-		havespace /${i}
-		grep -v "^/${i}/" ${TMPDIR}/tempsize > ${TMPDIR}/tempsize.tmp
-		mv ${TMPDIR}/tempsize.tmp ${TMPDIR}/tempsize
+	for i in $(tac /proc/mounts | grep "^/dev" |cut -f2 -d\ ); do
+		if grep -q "^${i}" ${TMPDIR}/tempsize ; then
+			havespace ${i}
+			grep -v "^${i}/" ${TMPDIR}/tempsize > ${TMPDIR}/tempsize.tmp
+			mv ${TMPDIR}/tempsize.tmp ${TMPDIR}/tempsize
+		fi	
 	done
-	havespace
 	echo ${ISOK}
 }
 
@@ -499,28 +511,9 @@ function checkgpg() {
 	gpg --verify ${1}.asc ${1} 2>/dev/null && echo "1" || echo "0"
 }
 
-# Check if package blacklisted 
-#
-function checkblacklist {
-        local i
-        local BLKNAME="${PKGDATA[1]}"
-
-        for i in 2 3 4; do
-                if grep -qx "${BLKNAME}" ${CONF}/blacklist ; then
-                        return 0
-                fi
-                BLKNAME="${BLKNAME}-${PKGDATA[$i]}"
-        done
-        if grep -qx "${PKGDATA[6]/./}" ${CONF}/blacklist ; then
-		return 0
-	else
-        	return 1
-	fi
-}
-
 # Found packages in repository. 
 # This function selects the package from the higher priority
-# reposistory directories.
+# repository directories.
 #
 function givepriority {
         local DIR
@@ -535,15 +528,8 @@ function givepriority {
 		[ "$PKGDATA" ] && break
                 PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${TMPDIR}/pkglist) )
                 if [ "$PKGDATA" ]; then
-                        checkblacklist
-                        if [ "$?" = "1" ]; then
-				NAME=${PKGDATA[1]}
-                                FULLNAME=$(echo "${PKGDATA[5]}.${PKGDATA[7]}")
-			else
-				unset PKGDATA
-				unset FULLNAME
-				unset NAME
-                        fi
+			NAME=${PKGDATA[1]}
+                        FULLNAME=$(echo "${PKGDATA[5]}.${PKGDATA[7]}")
                 fi
         done
 }
@@ -559,6 +545,10 @@ function listpkgname() {
 		cut -f1 -d\  | uniq > ${TMPDIR}/dpkg
 }
 
+function applyblacklist() {
+	grep -vEw -f ${TMPDIR}/blacklist
+}
+
 # Function to make install/reinstall/upgrade lists
 #
 function makelist() {
@@ -568,8 +558,13 @@ function makelist() {
 
 	INPUTLIST=$@
 
-	ls -1 /var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
-	cp ${WORKDIR}/pkglist ${TMPDIR}/pkglist
+	grep -vE "(^#|^[[:blank:]]*$)" ${CONF}/blacklist > ${TMPDIR}/blacklist
+	if echo $CMD | grep -q install ; then
+		ls -1 $ROOT/var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
+	else
+		ls -1 $ROOT/var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk | applyblacklist > ${TMPDIR}/tmplist
+	fi
+	cat ${WORKDIR}/pkglist | applyblacklist > ${TMPDIR}/pkglist
 
 	touch ${TMPDIR}/waiting
 
@@ -596,15 +591,15 @@ function makelist() {
 	case "$CMD" in
 		download)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
-					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
+				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
+					LIST="$LIST $(grep " ${i} " ${TMPDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
 				done
 				LIST="$(echo -e $LIST | sort -u)"
 			done
 		;;
 		blacklist)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 						grep -w -- "${ARGUMENT}" | cut -f2 -d\  | sort -u); do
 					grep -qx "${i}" ${CONF}/blacklist || LIST="$LIST $i"
 				done
@@ -642,7 +637,6 @@ function makelist() {
 					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u); do
 					PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 					[ ! "$PKGDATA" ] && continue
-					checkblacklist
 					LIST="$LIST ${PKGDATA[5]}" 
 					unset PKGDATA
 				done
@@ -651,9 +645,8 @@ function makelist() {
 		clean-system)
 			listpkgname
 			for i in $(comm -2 -3 ${TMPDIR}/lpkg ${TMPDIR}/spkg) ; do
-				PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
+				PKGDATA=( $(grep -- "^local $i " ${TMPDIR}/tmplist) )
 				[ ! "$PKGDATA" ] && continue
-				checkblacklist
 				LIST="$LIST ${PKGDATA[5]}" 
 				unset PKGDATA
 			done				
@@ -702,6 +695,11 @@ function makelist() {
 			done
 		;;	
 		search|file-search)
+				# -- temporary file used to store the basename of selected
+				#    packages.
+
+			PKGNAMELIST=$(tempfile --directory=$TMPDIR)
+
 			if [ "$CMD" = "file-search" ]; then
 				# Search filelist.gz for possible matches
 				for i in ${PRIORITY[@]}; do
@@ -710,26 +708,26 @@ function makelist() {
 							cut -d\  -f 1 | awk -F'/' '{print $NF}')"
 						for FULLNAME in $PKGS ; do
 							NAME=$(cutpkg ${FULLNAME})
-							echo $LIST | \
-								grep -qe "${NAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
-								continue
+							grep -q "^${NAME}$" $PKGNAMELIST && continue
 							LIST="$LIST ${FULLNAME}"
+							echo "$NAME" >> $PKGNAMELIST
 						done
 					fi
 				done
 			else
 				for i in ${PRIORITY[@]}; do
 					PKGS=$(grep "^${i}.*${PATTERN}" \
-						${WORKDIR}/pkglist | cut -f6 -d\ )
+						${TMPDIR}/pkglist | cut -f6 -d\ )
 					for FULLNAME in $PKGS ; do
 						NAME=$(cutpkg ${FULLNAME})
-						echo $LIST | \
-							grep -qe "${NAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
-							continue
+
+						grep -q "^${NAME}$" $PKGNAMELIST && continue
 						LIST="$LIST ${FULLNAME}"
+						echo "$NAME" >> $PKGNAMELIST
 					done
 				done
 			fi
+			rm -f $PKGNAMELIST
 		;;	
 	esac
 	LIST=$(echo -e $LIST | tr \  "\n" | uniq )
@@ -781,7 +779,7 @@ function searchlist() {
 	    # First is the package already installed?
 	    # Amazing what a little sleep will do
 	    # exclusion is so much nicer :)
-	    INSTPKG=$(ls -1 /var/log/packages | \
+	    INSTPKG=$(ls -1 $ROOT/var/log/packages | \
 		grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+")
 
 		# INSTPKG is local version
@@ -845,7 +843,7 @@ function getpkg() {
 	local NAMEPKG
 	local CACHEPATH
 
-	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${WORKDIR}/pkglist) )
+	PKGNAME=( $(grep -m 1 -- "[[:space:]]${1/%.t[blxg]z/}[[:space:]]" ${TMPDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}.${PKGNAME[7]}
 	FULLPATH=${PKGNAME[6]}
 	CACHEPATH=${TEMP}/${FULLPATH}
@@ -959,7 +957,7 @@ function checkchangelog()
 	if ! grep -q "[a-z]" $TMPDIR/ChangeLog.txt ; then
 		echo -e "\
 \nError downloading from $SOURCE.\n\
-Please, check your mirror and try again."
+Please check your mirror and try again."
 		cleanup
 	fi
 
@@ -1148,14 +1146,14 @@ function sanity_check() {
 
 	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
 
-	for i in $(ls -1 /var/log/packages | \
+	for i in $(ls -1 $ROOT/var/log/packages | \
 		egrep -- "^.*-(${ARCH}|fw|noarch)-[^-]+-upgraded"); do
 		REVNAME=$(echo ${i} | awk -F'-upgraded' '{ print $1 }')
-		mv /var/log/packages/${i} /var/log/packages/${REVNAME}
-		mv /var/log/scripts/${i} /var/log/scripts/${REVNAME}
+		mv $ROOT/var/log/packages/${i} $ROOT/var/log/packages/${REVNAME}
+		mv $ROOT/var/log/scripts/${i} $ROOT/var/log/scripts/${REVNAME}
 	done
 	
-	ls -1 /var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$" | \
+	ls -1 $ROOT/var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$" | \
 				  batchcutpkg | sort > $TMPDIR/list1 
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2
 	FILES="$(diff $TMPDIR/list1 $TMPDIR/list2 | grep '<' | cut -f2 -d\ )"
@@ -1172,12 +1170,12 @@ function sanity_check() {
 
 	if [ "$DOUBLEFILES" != "" ]; then
 		echo -e "\
-You have a broken /var/log/packages - with two versions of the same package.\n\
+You have a broken $ROOT/var/log/packages - with two versions of the same package.\n\
 The list of packages duplicated in your machine are shown below, but don't\n\
 worry about this list - when you select your action, slackpkg will show a\n\
 better list:\n"
 		for i in $DOUBLEFILES ; do
-			ls -1 /var/log/packages |\
+			ls -1 $ROOT/var/log/packages |\
 				egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-"
 		done
 		echo -ne "\n\
@@ -1192,7 +1190,7 @@ Select your action (B/R/I): "
 			;;
 			R|r)
 				for i in $DOUBLEFILES ; do
-					FILE=$(ls -1 /var/log/packages |\
+					FILE=$(ls -1 $ROOT/var/log/packages |\
 						egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-")
 					FILES="$FILES $FILE"
 				done
@@ -1312,7 +1310,7 @@ generate_template() {
 	touch $TMPDIR/waiting
 	echo -e "\tGenerating slackware installed package list (this may take a while) \c"
 	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
-	for i in /var/log/packages/* ; do 
+	for i in $ROOT/var/log/packages/* ; do 
 		PKGNAME=$( cutpkg $(basename $i))
 		grep -q " $PKGNAME " ${WORKDIR}/pkglist && \
 			echo $PKGNAME >> $TMPDIR/$TEMPLATE.work

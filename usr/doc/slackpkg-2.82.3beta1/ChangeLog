@@ -1,5 +1,156 @@
-ChangeLog
----------
+
+Wed Nov  8 00:45:00 UTC 2017
+---------------
+	- 2.82.3beta1
+	- Add an option to use vimdiff for comparing changes in .new files
+	  (thanks to David Allen)
+
+Sun Oct 10  07:48:13 UTC 2017
+---------------
+	- Updated mirrors-x86*.sample to remove dead mirrors and clarify
+	  intent to use mirrors.slackware.com
+	- Updated mirrors-arm.sample to sync with mozes' copy
+	- Add /usr/share/vim/ and /var/yp/ to search path for .new files
+	- Minor tweaks to default blacklist file
+	- Minor tweaks to manual pages
+	- Released as 2.82.2 (rworkman)
+
+Wed May 11 04:23:52 UTC 2016
+---------------
+	- Updated mirrors-x86*.sample for Slackware 14.2.
+	- Released as 2.82.1-1 (yet another unauthorized volkerdi release)
+
+2014 Thu Jul 10
+---------------
+        - Patched to respect the $ROOT environment variable to point to the
+          location to update (like installpkg does), and also to use the
+          $CONF environment variable to point to the slackpkg config file.
+          Thanks to Matteo Bernardini.
+        - Released as 2.82.0-13 (yet another unauthorized volkerdi release)
+
+2013 Sun Oct 20
+---------------
+        - Corrected some typos in the slackpkg man page.
+          Thanks to sycamorex.
+        - Released as 2.82.0-12 (yet another unauthorized volkerdi release)
+
+2013 Fri Oct 11
+---------------
+        - Verified and corrected the mirrors lists for x86 and x86_64.
+        - Changed version numbers from 14.0 to 14.1 in preparation for
+          the upcoming Slackware 14.1 release.
+        - Corrected a manpage bug in the file-search section.
+        - Released as 2.82.0-11 (yet another unauthorized volkerdi release)
+
+2013 Tue Sep 17
+---------------
+        - Patched core-functions.sh to fix searching for qt, phonon,
+          and other packages in cases where package names overlap.
+          Thanks to Sébastien Ballet.
+        - Released as 2.82.0-10 (yet another unauthorized volkerdi release)
+
+2013 Wed May 22
+---------------
+        - Set DOWNLOAD_ALL=on by default.  This avoids issues where
+          components that are needed by slackpkg requires library
+          updates in a different package.  Without downloading all
+          packages first failures are all too common.
+        - Released as 2.82.0-9 (yet another unauthorized volkerdi release)
+
+2012 Thu Aug 30
+---------------
+        - Merged a few fixes to the mirror lists for x86 and x86_64.
+          Thanks to Jordan Clarke for the help!
+        - Released as 2.82.0-8 (yet another unauthorized volkerdi release)
+
+2012 Fri Aug 24
+---------------
+        - Updated mirrors for Slackware 14.0 release.
+          Thanks to Jordan Clarke for the help!
+        - Released as 2.82.0-7 (yet another unauthorized volkerdi release)
+
+2012 Sun Jul 22
+---------------
+        - Added support for the XFCE series
+        - Released as 2.82.0-6 (Clandestine release by volkerdi  ;-)
+
+2011 Tue Apr 05
+---------------
+        - Fixed regex bugs (packages with 'asc' in the name ignored by
+          clean-system).        (Thanks David Somero)
+        - Released as 2.82.0-5
+
+2011 Wed Mar 30
+---------------
+	- Updated mirrors for Indonesia and Servia
+				(Thanks Willy Sudiarto and Branko Grubic)
+	- Better explanation about regex blacklisting in blacklist sample
+	  file.			(Thanks crocket and rworkman)
+	- Last ChangeLog date fixed, was Mar 23 and the correct is Mar 24
+	- Released as 2.82.0-4
+
+2011 Thu Mar 24
+---------------
+	- Fixed ARCH string for ARMedslack.
+				(report and fix by Niels Horn)
+	- Updated mirrors file to include slackware 13.37 mirrors
+				(thanks volkerdi)
+	- Updated blacklist sample file to include new usage examples
+	- Released as 2.82.0
+ 
+2011 Thu Feb 17
+---------------
+	- Fixed problem in "search" function:
+	  If the package name string matches the end of a previous
+	  package name it will not be in the "search" package list
+						(reported by David Lee)
+	- Removed old checkblacklist function and all references to it
+
+2010 Sun Dec 05
+---------------
+	- Some fixes in blacklist new function. The old one have problems
+	  when making the install list (all blacklisted packages appears
+	  as installables).
+
+2010 Fri Sep 10
+---------------
+	- Change in blacklist function. Using a fresh new one.
+	  Now blacklist is applied in package lists and not package-by-package.
+	  This speeds package list generation and allow the use of regexp
+	  on blacklist file.
+
+2010 Thu May 13
+---------------
+	- Include 2010 on Copyright notices
+	- Added slackware 13.1 on mirrors file (x86, x86_64 and arm)
+	- Released as 2.81.1
+
+2010 Sat May 01
+---------------
+	- Use $TMPDIR/pkglist instead $WORKDIR/tmplist on many places.
+	  This avoids problems when slackpkg does self-upgrade.
+	- Change CHECKSIZE default to "off"
+	- Fix CHECKSIZE to only check mountpoints. This avoids problems when
+	  the system have networked or DVD/CDs mounted
+					(Thanks alienbob and vbatts)
+	- Change version number to 2.81.1
+	- Released as 2.81.1beta1. Happy Workers Day!
+
+2010 Wed Apr 28
+---------------
+	- Fix blacklist checking on 'slackpkg clean-system'. It was
+	  checking if the package is blacklisted but didn't use this
+	  information.
+					(Reported by Greg and Shuren)
+	- Change 2.81 release date on ChangeLog and README to 2010 *Fri* 
+	  Apr 23, not 2010 *Thu* Apr 23.
+					(Thanks gui_ap)
+
+2010 Fri Apr 23
+---------------
+	- Fixed some typos in 'slackpkg help'
+	- Fixed 'update gpg' to use the unified getfile function
+	- Released as 2.81
 
 2010 Tue Apr 20
 ---------------

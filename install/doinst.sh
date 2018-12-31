@@ -10,13 +10,6 @@ config() {
   # Otherwise, we leave the .new copy for the admin to consider...
 }
 
-remove() {
-  FILE="$1"
-  if [ -r $FILE ]; then
-    rm $FILE
-  fi
-}
-
 copy_mirror_file() {
   ARCH=$(uname -m)
   case $ARCH in
@@ -36,12 +29,12 @@ copy_mirror_file() {
       SRCMIRROR=mirrors-x86.sample
     ;;
   esac
-  cp usr/doc/slackpkg-2.81/$SRCMIRROR etc/slackpkg/mirrors.new
+  cp usr/doc/slackpkg-2.82.3beta1/$SRCMIRROR etc/slackpkg/mirrors.new
 }
 
 copy_mirror_file
 config etc/slackpkg/mirrors.new
 config etc/slackpkg/slackpkg.conf.new
 config etc/slackpkg/blacklist.new
-remove var/lib/slackpkg/ChangeLog.txt
-remove var/lib/slackpkg/pkglist
+rm -f var/lib/slackpkg/ChangeLog.txt
+rm -f var/lib/slackpkg/pkglist
