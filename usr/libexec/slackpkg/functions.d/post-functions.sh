@@ -26,10 +26,20 @@ removeold() {
 }
 
 looknew() {
+
+	# with ONLY_NEW_DOTNEW set, slackpkg will search only for
+	# .new files installed in actual slackpkg's execution
+	if [ "$ONLY_NEW_DOTNEW" = "on" ]; then
+		ONLY_NEW_DOTNEW="-cnewer $TMPDIR/timestamp"
+	fi
+
 	echo -e "\nSearching for NEW configuration files"
-	FILES=$(find /etc -name "*.new" -not -name "rc.inet1.conf.new" \
-		-not -name "group.new" -not -name "passwd.new" \
-		-not -name "shadow.new" -not -name "gshadow.new" 2>/dev/null)
+	FILES=$(find /etc -name "*.new" ${ONLY_NEW_DOTNEW} \
+		-not -name "rc.inet1.conf.new" \
+		-not -name "group.new" \
+		-not -name "passwd.new" \
+		-not -name "shadow.new" \
+		-not -name "gshadow.new" 2>/dev/null)
 	if [ "$FILES" != "" ]; then
 		echo -e "\n\
 Some packages had new configuration files installed.

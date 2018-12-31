@@ -1,6 +1,24 @@
 ChangeLog
 ---------
 
+2009 Wed Mar 18
+---------------
+	- Non root users can use "check-updates" command in slackpkg
+	- Show to user if using FILELIST.TXT or CHECKSUMS.md5 as package
+	  lista source.
+	- Added ONLY_NEW_DOTNEW variable to slackpkg configuration file
+	  (and -only_new_dotnew to command line). With that, only the
+	  latest .new files will be checked by post-install function.
+	- Added ONLY_NEW_DOTNEW and PKGMAIN description on slackpkg.conf
+	  man-page.
+	- Added "check-updates" on slackpkg man-page.
+	- Random fixes in both man-pages.
+
+2009 Sat Mar 14
+---------------
+	- Change update and getpkg functions to create a slackware
+	  tree inside /var/cache/packages.
+
 2009 Fri Mar 06
 ---------------
 	- If FILELIST.TXT isn't found, use CHECKSUMS.md5 to the

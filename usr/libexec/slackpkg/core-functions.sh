@@ -19,7 +19,7 @@ One or more errors occurred while slackpkg was running:
 	fi    
 	echo
 	if [ "$DELALL" = "on" ] && [ "$NAMEPKG" != "" ]; then
-		rm $TEMP/$NAMEPKG &>/dev/null
+		rm $CACHEPATH/$NAMEPKG &>/dev/null
 	fi		
 	( rm -f /var/lock/slackpkg.$$ && rm -rf $TMPDIR ) &>/dev/null
 	exit
@@ -109,7 +109,10 @@ official mirrors can be kept up-to-date.\n"
 
 	# Checking if the user has the permissions to install/upgrade/update
 	#                                                                    
-	if [ "$(id -u)" != "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ]; then
+	if [ "$(id -u)" != "0" ] && \
+	   [ "$CMD" != "search" ] && \
+	   [ "$CMD" != "check-updates" ] && \
+	   [ "$CMD" != "info" ]; then
 		echo -e "\n\
 Only root can install, upgrade, or remove packages.\n\
 Please log in as root or contact your system administrator.\n"
@@ -263,7 +266,7 @@ function checkpkg() {
 	local MD5DOWNLOAD
 
 	MD5ORIGINAL=$(grep "/${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ )
-	MD5DOWNLOAD=$(md5sum ${TEMP}/${1} | cut -f1 -d \ )
+	MD5DOWNLOAD=$(md5sum ${CACHEPATH}/${1} | cut -f1 -d \ )
 	if [ "$MD5ORIGINAL" = "$MD5DOWNLOAD" ]; then
 		echo 1 
 	else
@@ -272,7 +275,7 @@ function checkpkg() {
 }
 
 function checkgpg() {
-	gpg --verify ${TEMP}/${1}.asc ${TEMP}/${1} 2>/dev/null && echo "1" || echo "0"
+	gpg --verify ${CACHEPATH}/${1}.asc ${CACHEPATH}/${1} 2>/dev/null && echo "1" || echo "0"
 }
 
 
@@ -497,32 +500,39 @@ function getpkg() {
 	local PKGNAME
 	local FULLPATH
 	local NAMEPKG
+	local CACHEPATH
 
 	PKGNAME=( $(grep -w -m 1 -- "$1" ${WORKDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}
 	FULLPATH=${PKGNAME[6]}
+	CACHEPATH=${TEMP}/${FULLPATH}
 
-	if ! [ -e ${TEMP}/${NAMEPKG} ]; then
+	# Create destination dir if it isn't there
+	if ! [ -d $CACHEPATH ]; then
+		mkdir -p $CACHEPATH
+	fi
+
+	if ! [ -e ${CACHEPATH}/${NAMEPKG} ]; then
 		echo -e "\nPackage: $1"
 		# Check if the mirror are local, if is local, copy files 
-		# to TEMP else, download packages from remote host and 
-		# put then in TEMP
+		# to CACHEPATH else, download packages from remote host and 
+		# put then in CACHEPATH
 		#
 		if [ "${LOCAL}" = "1" ]; then 
                 	echo -e "\tCopying $NAMEPKG..."
-			cp ${SOURCE}${FULLPATH}/${NAMEPKG} ${TEMP}
+			cp ${SOURCE}${FULLPATH}/${NAMEPKG} ${CACHEPATH}
 			if [ "$CHECKGPG" = "on" ]; then
-				cp ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${TEMP}
+				cp ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${CACHEPATH}
 			fi
 		else
                 	echo -e "\tDownloading $NAMEPKG..."
-			wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
+			wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
 			if [ "$CHECKGPG" = "on" ]; then
-				wget ${WGETFLAGS} -P ${TEMP} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
+				wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
 			fi
 		fi
 
-		if ! [ -e $TEMP/$1 ]; then
+		if ! [ -e $CACHEPATH/$1 ]; then
 			ERROR="Not found"
 			ISOK="0"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
@@ -565,9 +575,9 @@ function getpkg() {
 				echo -e "\c"
 			;;
 		esac	
-		( cd $TEMP && $2 $1 )
+		( cd $CACHEPATH && $2 $1 )
 	else 
-		rm $TEMP/$1 2>/dev/null
+		rm $CACHEPATH/$1 2>/dev/null
 		echo -e "\tERROR - Package not installed! $ERROR error!" 
 	fi
 
@@ -575,7 +585,7 @@ function getpkg() {
 	# after installed/upgraded/reinstalled
 	#
 	if [ "$DELALL" = "on" ]; then
-		rm $TEMP/$1 $TEMP/${1}.asc 2>/dev/null
+		rm $CACHEPATH/$1 $CACHEPATH/${1}.asc 2>/dev/null
 	fi		
 }
 
@@ -660,11 +670,18 @@ function updatefilelists()
 	# Format FILELIST.TXT
 	#
 	echo -e "\tFormatting lists to slackpkg style..."
-	echo -e "\t\tPackage List: using $FILELIST as source"
+	echo -e "\t\tPackage List: using $( basename $FILELIST ) as source"
 	grep "\.tgz" $FILELIST| \
 		awk -f /usr/libexec/slackpkg/pkglist.awk |\
 		sed -e 's/^M//g' > ${TMPDIR}/pkglist
 	cp ${TMPDIR}/pkglist ${WORKDIR}/pkglist		
+
+	# Create the slackware tree under TEMP directory
+	for i in $( cut -f7 -d\  ${WORKDIR}/pkglist | sort -u ) ; do
+	  if ! [ -d ${TEMP}/${i} ]; then
+	    mkdir -p ${TEMP}/${i}
+	  fi
+	done
 
 	# Format MANIFEST
 	#

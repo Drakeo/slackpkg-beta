@@ -1,6 +1,6 @@
 #
 # slackpkg.conf - Configuration for SlackPkg
-# v2.3
+# v2.4
 #
 
 #
@@ -86,6 +86,14 @@ MAIN=$PKGMAIN
 # as checking for new (*.new) configuration files and new kernel images, and
 # prompts you for what it should do.  Default=on
 POSTINST=on
+
+# Post-installation features, by default, search all /etc for .new files.
+# This is the safe option, with that you can't be with thousands of .new
+# files without care. Some people don't like this behaviour and wants
+# that only the .new files installed in actual slackpkg's session to be
+# checked. If this is your case, change it ONLY_NEW_DOTNEW to "on".
+# Default=off
+ONLY_NEW_DOTNEW=off
 
 # The ONOFF variable sets the initial behavior of the dialog interface.
 # If you set this to "on" then all packages will be selected by default.
