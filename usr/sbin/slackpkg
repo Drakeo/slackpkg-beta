@@ -32,24 +32,21 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.71beta5
+VERSION=2.80.2
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
-SLACKKEY="Slackware Linux Project <security@slackware.com>"
 CONF=/etc/slackpkg
-SOURCE=$(grep -e "^\([a-z]\)" $CONF/mirrors)
+SOURCE=$(sed -e 's/^[[:blank:]]*//' $CONF/mirrors | grep -m1 -e "^\([a-z]\)")
 . $CONF/slackpkg.conf
-ARCH=${ARCH:-i[3456]86}
-LOCAL=0
-CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
-KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
+ERROR=""
+
+# Set temporary directory
+#
 TMPDIR=$(mktemp -p /tmp -d slackpkg.XXXXXX 2>/dev/null || echo "FAILED")
 if [ "$TMPDIR" = "FAILED" ]; then
 	TMPDIR="/tmp/slackpkg.${RANDOM}"
 	mkdir -m 700 $TMPDIR || TMPDIR="FAILED"
 fi
-echo "$0 $VERSION - Slackware Linux $SLACKWARE_VERSION" > $TMPDIR/timestamp
-ERROR=""
 
 #
 # Load the slackpkg functions
@@ -74,12 +71,12 @@ while [ -n "$1" ] ; do
       DELALL=off
       shift
     ;;
-    -checkpkg=on)
-      CHECKPKG=on
+    -checkmd5=on)
+      CHECKMD5=on
       shift
     ;;
-    -checkpkg=off)
-      CHECKPKG=off
+    -checkmd5=off)
+      CHECKMD5=off
       shift
     ;;
     -checkgpg=on)
@@ -138,6 +135,22 @@ while [ -n "$1" ] ; do
       ONLY_NEW_DOTNEW=off
       shift
     ;;
+    -use_includes=on)
+      USE_INCLUDES=on
+      shift
+    ;;
+    -use_includes=off)
+      USE_INCLUDES=off
+      shift
+    ;;
+    -spinning=on)
+      SPINNING=on
+      shift
+    ;;
+    -spinning=off)
+      SPINNING=off
+      shift
+    ;;
     -default_answer=y|-default_answer=yes)
       DEFAULT_ANSWER=y
       shift
@@ -190,12 +203,33 @@ while [ -n "$1" ] ; do
         shift $#
       fi
     ;;
+    generate-template|install-template|remove-template)
+      CMD=$1
+      shift
+      if [ -n "$1" ]; then 
+        ARG=$1
+	shift
+      else
+        usage
+      fi
+
+      if [ -n "$1" ]; then
+	echo -e "\n$CMD: Ignoring extra arguments."
+        shift $#
+      fi
+    ;;
     *)
 	echo -e "\n$1: Unknown option.\n"
 	usage
     ;;
   esac
 done
+
+#========================================================================
+#
+# SYSTEM SETUP
+#
+system_setup
 
 #========================================================================
 #
@@ -310,7 +344,7 @@ case "$CMD" in
 	"remove")
 		makelist $INPUTLIST
 		if [ "$LIST" = "" ]; then
-			echo -e "The file $CMD can't be removed - package not installed.\n"
+			echo -e "The file(s) $INPUTLIST can't be removed - package not installed.\n"
 			cleanup
 		fi
 		showlist "$LIST" $CMD
@@ -392,14 +426,14 @@ case "$CMD" in
 	"search")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g'`
 		# Search filelist.gz for possible matches
-		for i in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
+		for i in ${PRIORITY[@]}; do
 			if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
 				PKGS="$(zegrep $PATTERN ${WORKDIR}/${i}-filelist.gz | \
 					cut -d\  -f 1 | awk -F'/' '{print $NF}')"
 				for j in $PKGS ; do
 					NEWONE=`cutpkg ${j}`
 					echo $PACKAGES | \
-						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+" && \
+						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
 						continue
 					PACKAGES="$PACKAGES $j"
 				done
@@ -419,7 +453,7 @@ The list below shows all packages with the selected pattern.\n"
 			BASENAME="$(cutpkg ${i})"
 
 			# RAWNAME is Latest available version  
-			RAWNAME="${i/.t[blxg]z/}"
+			RAWNAME="${i/%.t[blxg]z/}"
 
 			# Default is uninstalled
 			STATUS="uninstalled"
@@ -428,7 +462,7 @@ The list below shows all packages with the selected pattern.\n"
 			# Amazing what a little sleep will do
 			# exclusion is so much nicer :)
 			INSTPKG=$(ls -1 /var/log/packages | \
-				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+")
+				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+")
 
 			    # INSTPKG is local version
 			    if [ ! "${INSTPKG}" = "" ]; then
@@ -450,7 +484,7 @@ The list below shows all packages with the selected pattern.\n"
 	"info")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`
 		NAME=$(cutpkg $PATTERN)
-		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[[:digit:]]+/,/^$/ {
+		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[^-]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
 				 print \$PATTERN 
@@ -467,6 +501,63 @@ The list below shows all packages with the selected pattern.\n"
 	new-config)
 		POSTINST=on
 	;;
+	generate-template)
+		TEMPLATE=$ARG.template
+		if [ -e $TEMPLATEDIR/$TEMPLATE ]; then
+			echo -e "\
+\"$TEMPLATE\" already exists!\n\
+\nDo you want to overwrite $TEMPLATE (y/N)? \c"
+			answer
+			if [ "$ANSWER" = "Y" -o "$ANSWER" = "y" ]; then
+				rm $TEMPLATEDIR/$TEMPLATE
+				echo
+			else
+				cleanup
+			fi
+		fi	
+		generate_template $ARG
+	;;
+	install-template)
+		TEMPLATE=$ARG.template
+		if [ -e $TEMPLATEDIR/$TEMPLATE ]; then
+			( cd $TEMPLATEDIR
+			  parse_template $TEMPLATE
+			)
+			INPUTLIST=$(cat ${TMPDIR}/${TEMPLATE}.tmp | tr "\n" " ")
+		else
+			echo -e "$ARG template not found!"
+			cleanup
+		fi
+
+		makelist $INPUTLIST
+		if [ -n "$LIST" ]; then
+			showlist "$LIST" $CMD
+			install_pkg
+		else
+			echo -e "All packages from $ARG template are already installed"
+			POSTINST=off
+		fi
+	;;
+	remove-template)
+		TEMPLATE=$ARG.template
+		if [ -e $TEMPLATEDIR/$TEMPLATE ]; then
+			( cd $TEMPLATEDIR
+			  parse_template $TEMPLATE
+			)
+			INPUTLIST=$(cat ${TMPDIR}/${TEMPLATE}.tmp | tr "\n" " ")
+		else
+			echo -e "$ARG template not found!"
+			cleanup
+		fi
+
+		makelist $INPUTLIST
+		if [ "$LIST" = "" ]; then
+			echo -e "The template $ARG can't be removed - it isn't installed.\n"
+			cleanup
+		fi
+		showlist "$LIST" $CMD
+		remove_pkg
+	;;
 	*)
 		usage
 	;;
@@ -480,7 +571,7 @@ esac
 # someone remove the kernel, i hope he knows what is doing.
 #
 for i in check-updates remove search update blacklist info \
-	 clean-system download; do
+	 clean-system download generate-template remove-template; do
 	if [ "$CMD" = "$i" ]; then
 		POSTINST=off
 	fi

@@ -26,9 +26,154 @@ One or more errors occurred while slackpkg was running:
 }
 trap 'cleanup' 2 14 15 		# trap CTRL+C and kill
 
+# This create an spinning bar
+spinning() {
+	local WAITFILE
+	local SPININTERVAL
+	local COUNT
+	
+	if [ "$SPIN" = "" ]; then
+		SPIN=( "|" "/" "-" "\\" )
+	fi
+	COUNT=${#SPIN[@]}
+		
+	[ -n "$1" ] && WAITFILE=$1 || WAITFILE=/tmp/waitfile
+	[ -n "$2" ] && SPININTERVAL=$2 || SPININTERVAL=0.1
+
+	count=0
+	tput civis 
+	while [ -e $WAITFILE ] ; do 
+		count=$(( count + 1 ))
+		tput sc
+		echo -n ${SPIN[$(( count % COUNT ))]}
+		tput rc
+		sleep $SPININTERVAL
+	done
+	tput cnorm
+}
+
+# System setup
+#
+function system_setup() {
+
+	# Set LOCAL if mirror isn't through network 
+	#
+	MEDIA=$(echo ${SOURCE} | cut -f1 -d:)
+	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
+	   [ "$MEDIA" = "local" ]; then
+		SOURCE=/$(echo ${SOURCE} | cut -f3- -d/)
+		LOCAL=1
+	else
+		LOCAL=0
+	fi
+	
+	# Set MORECMD, EDITCMD and check BATCH mode 
+	#
+	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
+		DIALOG=off
+		SPINNING=off
+		MORECMD=cat
+		EDITCMD=vi
+		if [ "$DEFAULT_ANSWER" = "" ]; then
+			DEFAULT_ANSWER=n
+		fi
+	else
+		if [ "${PAGER}" ]; then	
+			MORECMD="${PAGER}"
+		else
+			MORECMD=more
+		fi
+		if [ "${EDITOR}" ]; then	
+			EDITCMD="${EDITOR}"
+		else
+			EDITCMD=vi
+		fi
+	fi
+
+	# Set ARCH, SLACKKEY and others by slackware port
+	#
+	if [ "$ARCH" = "" ]; then
+		ARCH=$(uname -m)
+	fi
+	case $ARCH in
+		i386|i486|i586|i686)
+			ARCH=[i]*[3456x]86
+			SLACKKEY=${SLACKKEY:-"Slackware Linux Project <security@slackware.com>"}
+			PKGMAIN=${PKGMAIN:-slackware}
+		;;
+		x86-64|x86_64|X86-64|X86_64)
+			ARCH=x86[_64]*
+			SLACKKEY=${SLACKKEY:-"Slackware Linux Project <security@slackware.com>"}
+			PKGMAIN=${PKGMAIN:-slackware64}
+		;;
+		s390)
+			ARCH=s390
+			# Slack390 didn't have signed packages
+			CHECKGPG=off
+			PKGMAIN=${PKGMAIN:-slackware}
+		;;
+		arm*)
+			ARCH=arm[el]*
+			SLACKKEY=${SLACKKEY:-"ARMedslack Security (ARMedslack Linux Project Security) <security@armedslack.org>"}
+			PKGMAIN=${PKGMAIN:-slackware}
+		;;
+		powerpc|ppc)
+			ARCH=powerpc
+			SLACKKEY=${SLACKKEY:-"Slackintosh-Project Sign <slackdev@workaround.ch>"}
+			PKGMAIN=${PKGMAIN:-slackintosh}
+		;;
+		*)
+			ARCH=none
+		;;
+	esac
+
+	# Sub %PKGMAIN with the correct $PKGMAIN value
+	#
+	MAIN=$PKGMAIN
+	for i in 0 1 2 3 4 ; do
+		if [ "${PRIORITY[$i]}" = "%PKGMAIN" ]; then
+			PRIORITY[$i]=$PKGMAIN
+		fi
+	done
+
+	TEMPLATEDIR=$CONF/templates
+	if [ ! -d $TEMPLATEDIR ]; then
+	  mkdir $TEMPLATEDIR
+	fi
+
+	SLACKCFVERSION=$(grep "# v[0-9.]\+" $CONF/slackpkg.conf | cut -f2 -dv)
+	CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
+	KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
+	echo "$0 $VERSION - Slackware Linux $SLACKWARE_VERSION" > $TMPDIR/timestamp
+}
+
 # Syntax Checking
 #
 function system_checkup() {
+
+	# Check slackpkg.conf version
+	#
+	SLCKCFVL=$( expr length $SLACKCFVERSION )
+	if [ "$SLACKCFVERSION" != "$( echo $VERSION |cut -c1-$SLCKCFVL)" ] &&\
+	   [ "$CMD" != "new-config" ]; then
+		echo -e "\
+\nYour slackpkg.conf is outdated. Please, edit it using slackpkg.conf.new\n\
+as example or overwrite it with slackpkg.conf.new.\n\
+\nYou can use 'slackpkg new-config' to do that.\n"
+		cleanup
+	fi
+
+	# Check if ARCH is set
+	#
+	if [ "$ARCH" = "none" ] && [ "$CMD" != "new-config" ]; then
+		echo -e "\
+\nThe ARCH values in slackpkg.conf are now different. You can remove\n\
+ARCH from there, and slackpkg you use your current ARCH or you can look\n\
+at slackpkg.conf.new or slackpkg.conf manual page to see the new valid\n\
+ARCH values\n"
+		cleanup
+	fi
+
 	# Check if the config files are updated to the new slackpkg version
 	#
 	if [ "$WORKDIR" = "" ]; then
@@ -67,19 +212,27 @@ the problem.\n"
 	# Checking if is the first time running slackpkg
 	#                                               
 	if ! [ -f ${WORKDIR}/pkglist ] && [ "$CMD" != "update" ]; then
-		echo -e "\
+		if [ "$SOURCE" = "" ]; then
+                	echo -e "\
 \nThis appears to be the first time you have run slackpkg.\n\
 Before you install|upgrade|reinstall anything, you need to uncomment\n\
 ONE mirror in ${CONF}/mirrors and run:\n\n\
 \t# slackpkg update\n\n\
 You can see more information about slackpkg functions in slackpkg manpage."
-		cleanup
+			cleanup
+		elif [ "$CMD" != "new-config" ]; then
+			echo -e "\
+\nThe package list is missing.\n\
+Before you install|upgrade|reinstall anything you need to run:\n\n\
+\t# slackpkg update\n"
+			cleanup
+		fi
 	fi                                                      
 
 
 	# Checking if /etc/slackpkg/mirrors are in correct syntax.
 	#                                                         
-	if [ "$SOURCE" = "" ]; then
+	if [ "$SOURCE" = "" ] ; then
 		echo -e "\
 \nYou do not have any mirror selected in ${CONF}/mirrors\n\
 Please edit that file and uncomment ONE mirror.  Slackpkg\n\
@@ -119,15 +272,6 @@ Please log in as root or contact your system administrator.\n"
 		cleanup
 	fi          
 
-	# Check if the mirror are local (cdrom or file)
-	#
-	MEDIA=$(echo ${SOURCE} | cut -f1 -d:)
-	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
-	   [ "$MEDIA" = "local" ]; then
-		SOURCE=/$(echo ${SOURCE} | cut -f3- -d/)
-		LOCAL=1
-	fi
-
 	# Check if the "which" command is there
 	if ! which which 1>/dev/null 2>/dev/null ; then
 		echo -e "\n\
@@ -140,10 +284,10 @@ use slackpkg.\n"
 	# md5sum checks
 	#
 	if ! [ $(which md5sum 2>/dev/null) ]; then
-		CHECKPKG=off
+		CHECKMD5=off
 	elif ! [ -f ${WORKDIR}/CHECKSUMS.md5 ] && \
 		[ "$CMD" != "update" ] && \
-		[ "$CHECKPKG" = "on" ]; then
+		[ "$CHECKMD5" = "on" ]; then
 		echo -e "\n\
 No CHECKSUMS.md5 found!  Please disable md5sums checking\n\
 on your ${CONF}/slackpkg.conf or run slackpkg update\n\
@@ -167,9 +311,9 @@ as slackpkg cannot function without awk.\n"
 		echo -e "\n\
 gpg package not found!  Please disable GPG in ${CONF}/slackpkg.conf or install\n\
 the gnupg package.\n\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
-to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
-with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG \n\
+variable to "off" - you can see an example in the original slackpkg.conf.new\n\
+file distributed with slackpkg.\n"
 		sleep 5
 	fi 
 
@@ -180,6 +324,7 @@ with slackpkg.\n"
 	if [ "$GPGFIRSTTIME" = "0" ] && \
 		[ "$CMD" != "search" ] && \
 		[ "$CMD" != "info" ] && \
+		[ "$CMD" != "new-config" ] && \
 		[ "$CMD" != "update" ] && \
 		[ "$CMD" != "check-updates" ] && \
 		[ "$CHECKGPG" = "on" ]; then
@@ -188,20 +333,10 @@ You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
 \t# slackpkg update gpg\n\n\
 You can disable GPG checking too, but it is not a good idea.\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
-to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
-with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG\n\
+variable to "off" - you can see an example in the original slackpkg.conf.new\n\
+file distributed with slackpkg.\n"
 		cleanup
-	fi
-
-	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
-		DIALOG=off
-		MORECMD=cat
-		if [ "$DEFAULT_ANSWER" = "" ]; then
-			DEFAULT_ANSWER=n
-		fi
-	else
-		MORECMD=more
 	fi
 	echo 
 }
@@ -209,7 +344,7 @@ with slackpkg.\n"
 # Got the name of a package, without version-arch-release data
 #
 function cutpkg() {
-	echo ${1/.t[blxg]z/} | awk -F- 'OFS="-" { 
+	echo ${1/%.t[blxg]z/} | awk -F- 'OFS="-" { 
 				if ( NF > 3 ) { 
 					NF=NF-3
 					print $0 
@@ -255,6 +390,11 @@ slackpkg - version $VERSION\n\
 \t\t\t\t\tentire package collection
 \tslackpkg new-config\t\tSearch for new configuration files and
 \t\t\t\t\task to user what to do with them.
+\tslackpkg generate-template\tCreate a template with all 
+\t\t\t\t\tofficial Slackware packages installed 
+\t\t\t\t\tin your machine.
+\tslackpkg install-template\tInstall selected template.
+\tslackpkg remove-template\tRemove selected template. Be careful.
 \nYou can see more information about slackpkg usage and some examples
 in slackpkg's manpage. You can use partial package names (such as x11
 instead x11-devel, x11-docs, etc), or even Slackware series
@@ -310,9 +450,9 @@ function givepriority {
         unset FULLNAME
 	unset PKGDATA
 	
-        for DIR in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
+        for DIR in ${PRIORITY[@]} ; do
 		[ "$PKGDATA" ] && break
-                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${WORKDIR}/pkglist) )
+                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${TMPDIR}/pkglist) )
                 if [ "$PKGDATA" ]; then
                         checkblacklist
                         if [ "$?" = "1" ]; then
@@ -338,6 +478,9 @@ function makelist() {
 	INPUTLIST=$@
 
 	ls -1 /var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
+	cp ${WORKDIR}/pkglist ${TMPDIR}/pkglist
+
+	touch ${TMPDIR}/waiting
 
 	case "$CMD" in
 		clean-system)
@@ -349,10 +492,15 @@ function makelist() {
 		install-new)
 			echo -n "Looking for NEW packages to install. Please wait... "
 		;;
+		*-template)
+			echo -n "Looking for packages in \"$ARG\" template to ${CMD/%-template/}. Please wait..."
+		;;
 		*)
 			echo -n "Looking for $(echo $INPUTLIST | tr -d '\\') in package list. Please wait... "
 		;;
 	esac
+
+	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
 
 	case "$CMD" in
 		download)
@@ -373,7 +521,7 @@ function makelist() {
 		;;
 		install|upgrade|reinstall)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
+				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
 					givepriority $i
 					[ ! "$FULLNAME" ] && continue
 
@@ -381,7 +529,7 @@ function makelist() {
 						'upgrade')
 							VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | \
 							      grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
-							[ "${FULLNAME/.t[blxg]z/}" != "${VRFY}" ]  && \
+							[ "${FULLNAME/%.t[blxg]z/}" != "${VRFY}" ]  && \
 										[ "${VRFY}" ] && \
 								LIST="$LIST ${FULLNAME}"
 						;;
@@ -390,7 +538,7 @@ function makelist() {
 								LIST="$LIST ${FULLNAME}"
 						;;
 						'reinstall')
-							grep -q " ${FULLNAME/.t[blxg]z} " ${TMPDIR}/tmplist && \
+							grep -q " ${FULLNAME/%.t[blxg]z} " ${TMPDIR}/tmplist && \
 								LIST="$LIST ${FULLNAME}"
 						;;
 					esac
@@ -399,7 +547,7 @@ function makelist() {
 		;;
 		remove)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u); do
 					PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 					[ ! "$PKGDATA" ] && continue
@@ -425,7 +573,7 @@ function makelist() {
 				[ ! "$FULLNAME" ] && continue
 
 				VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|fw\|${ARCH}\)-[^-]\+")
-				[ "${FULLNAME/.t[blxg]z}" != "${VRFY}" ]  && \
+				[ "${FULLNAME/%.t[blxg]z}" != "${VRFY}" ]  && \
 							[ "${VRFY}" ] && \
 					LIST="$LIST ${FULLNAME}"
 			done
@@ -443,8 +591,27 @@ function makelist() {
 					LIST="$LIST ${FULLNAME}"
 			done
 		;;
+		install-template)
+			for i in $INPUTLIST ; do
+				givepriority $i
+				[ ! "$FULLNAME" ] && continue
+				grep -q " ${NAME} " ${TMPDIR}/tmplist || \
+					LIST="$LIST ${FULLNAME}"
+			done
+		;;	
+		remove-template)
+			for i in $INPUTLIST ; do
+				givepriority $i
+				[ ! "$FULLNAME" ] && continue
+				grep -q " ${NAME} " ${TMPDIR}/tmplist && \
+					LIST="$LIST ${FULLNAME}"
+			done
+		;;	
 	esac
 	LIST=$(echo -e $LIST | tr \  "\n" | uniq )
+
+	rm ${TMPDIR}/waiting
+
 	echo -e "DONE\n"
 }
 
@@ -507,7 +674,7 @@ function getpkg() {
 	local NAMEPKG
 	local CACHEPATH
 
-	PKGNAME=( $(grep -w -m 1 -- "${1/t[blxg]z/}" ${WORKDIR}/pkglist) )
+	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${WORKDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}.${PKGNAME[7]}
 	FULLPATH=${PKGNAME[6]}
 	CACHEPATH=${TEMP}/${FULLPATH}
@@ -549,7 +716,7 @@ function getpkg() {
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
 	# packages md5sum to detect if they are corrupt or not
 	#
-	if [ "$CHECKPKG" = "on" ] && [ "$ISOK" = "1" ]; then
+	if [ "$CHECKMD5" = "on" ] && [ "$ISOK" = "1" ]; then
 		ISOK=$(checkmd5 ${CACHEPATH}/$1)
 		if [ "$ISOK" = "0" ]; then 
 			ERROR="md5sum"
@@ -579,10 +746,10 @@ function getpkg() {
 	if [ "$ISOK" = "1" ]; then
 		case $2 in
 			installpkg)
-				echo -e "\tInstalling ${1/.t[blxg]z/}..."
+				echo -e "\tInstalling ${1/%.t[blxg]z/}..."
 			;;
 			upgradepkg)
-				echo -e "\tUpgrading ${1/.t[blxg]z/}..."
+				echo -e "\tUpgrading ${1/%.t[blxg]z/}..."
 			;;
 			*)
 				echo -e "\c"
@@ -651,7 +818,7 @@ function updatefilelists()
 	# That will be download MANIFEST.bz2 files
 	#
 	echo -e "\t\tList of all files"
-	for i in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do 
+	for i in ${PRIORITY[@]} ; do 
 		getfile ${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
 			DIRS="$DIRS $i"
 	done
@@ -679,7 +846,7 @@ function updatefilelists()
 \t\t       or has been tampered with.\n"
 				cleanup
 			fi
-		else
+		elif [ "$SLACKKEY" != "" ]; then
 			echo -e "\
 \n\t\tWARNING: Without CHECKGPG, we can't check if this file is\n\
 \t\t         signed by:\n\
@@ -693,7 +860,7 @@ function updatefilelists()
 	ISOK="1"
 	echo -e "\t\tPackage List"
 	getfile FILELIST.TXT $TMPDIR/FILELIST.TXT
-	if [ "$CHECKPKG" = "on" ]; then
+	if [ "$CHECKMD5" = "on" ]; then
 		CHECKSUMSFILE=$TMPDIR/CHECKSUMS.md5
 		ISOK=$(checkmd5 $TMPDIR/FILELIST.TXT)
 	fi
@@ -749,7 +916,7 @@ function updatefilelists()
 	#
 	echo -e "\tFormatting lists to slackpkg style..."
 	echo -e "\t\tPackage List: using $( basename $FILELIST ) as source"
-	grep ".t[blxg]z" $FILELIST| \
+	grep "\.t[blxg]z$" $FILELIST| \
 		awk -f /usr/libexec/slackpkg/pkglist.awk |\
 		sed -e 's/^M//g' > ${TMPDIR}/pkglist
 	cp ${TMPDIR}/pkglist ${WORKDIR}/pkglist		
@@ -906,4 +1073,99 @@ function install_pkg() {
 	for i in $SHOWLIST; do
 		getpkg $i installpkg Installing
 	done
+}
+
+#
+# Template related functions
+#
+include_includes() {
+	TEMPLATEFILE=$1
+	COUNT=$((COUNT + 1))
+	TMPFILE=$TMPDIR/$(basename $( echo $TEMPLATEFILE | cut -f1,2 -d. )).$COUNT.tmp
+	INCLUDELIST="$( grep "^#include" $TEMPLATEFILE | cut -d\  -f2 )"
+	if [ "$INCLUDELIST" != "" ]; then
+		for INCLUDE in $INCLUDELIST ; do
+			echo "#include $INCLUDE" \
+				>> ${TMPFILE/.$COUNT/}.header
+			cat $INCLUDE > $TMPFILE
+			grep -v "^$" $TEMPLATEFILE | grep -v "^#" >> $TMPFILE
+			include_includes $TMPFILE
+		done
+	else
+		echo $TEMPLATEFILE
+		return
+	fi
+}
+
+parse_template() {
+	if [ "$USE_INCLUDES" = "off" ]; then
+		touch $TMPDIR/$1.header
+		grep -v "^$" $1 | grep -v "^#" | sort -u > $TMPDIR/$1.tmp
+	else
+		TMPFILE=$(include_includes $1)
+		sort -u $TMPFILE > $TMPDIR/$1.tmp
+		if [ -e $TMPDIR/$1.tmp.header ]; then
+			sort -u $TMPDIR/$1.tmp.header > $TMPDIR/$1.header
+		fi
+		rm $TMPDIR/$1.[0-9]*.tmp $TMPDIR/$1.tmp.header 2>/dev/null
+	fi
+}
+
+generate_template() {
+	if [ "$USE_INCLUDES" = "on" ]; then
+		(
+			cd $TEMPLATEDIR
+			if [ "$(ls *.template 2>/dev/null)" != "" ]; then
+				echo -e "\tParsing actual template files:"
+				for i in *.template ; do
+					echo -e "\t\t$i"
+					parse_template $i
+				done
+			fi
+		)
+	fi
+
+	touch $TMPDIR/allheaders
+
+	touch $TMPDIR/waiting
+	echo -e "\tGenerating slackware installed package list (this may take a while) \c"
+	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
+	for i in /var/log/packages/* ; do 
+		PKGNAME=$( cutpkg $(basename $i))
+		grep -q " $PKGNAME " ${WORKDIR}/pkglist && \
+			echo $PKGNAME >> $TMPDIR/$TEMPLATE.work
+	done  
+	rm $TMPDIR/waiting
+	echo " "
+
+	echo -e "\tGenerating $TEMPLATE "
+	for TMPLATE in $( wc -l $TMPDIR/* | sort -r | \
+			  awk -F/ '/template.tmp/ { print $NF }'); do
+		if ! $( grep -q "^#include.*${TMPLATE/.tmp/}" \
+			$TMPDIR/allheaders) ; then
+			diff -y $TMPDIR/$TEMPLATE.work $TMPDIR/$TMPLATE | \
+				awk -vTMPDIR=$TMPDIR \
+				 	'!/</ { print $1 > TMPDIR"/same" } 
+					 /</ { print $1 > TMPDIR"/notsame" }'
+			if $( diff -q 	$TMPDIR/$TMPLATE \
+					$TMPDIR/same &>/dev/null ); then
+				echo "#include ${TMPLATE/.tmp/}" \
+					>> $TMPDIR/$TEMPLATE.header
+				cat $TMPDIR/${TMPLATE/.tmp/}.header \
+					>> $TMPDIR/allheaders 2>/dev/null
+				cat $TMPDIR/same >> $TMPDIR/allfiles
+			fi
+		fi
+	done
+
+	if [ -e $TMPDIR/allfiles ]; then
+		sort -u $TMPDIR/allfiles > $TMPDIR/alluniqfiles
+	else
+		touch $TMPDIR/alluniqfiles
+	fi
+	if [ -e $TMPDIR/$TEMPLATE.header ]; then
+		cat $TMPDIR/$TEMPLATE.header > $TEMPLATEDIR/$TEMPLATE
+	fi
+	diff $TMPDIR/alluniqfiles $TMPDIR/$TEMPLATE.work |\
+		 awk '/>/ { print $2 }' >> $TEMPLATEDIR/$TEMPLATE
 }

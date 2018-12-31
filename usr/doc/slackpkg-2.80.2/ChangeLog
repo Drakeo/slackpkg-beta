@@ -1,6 +1,159 @@
 ChangeLog
 ---------
 
+2009 Mon Jul 27
+---------------
+	- Bumped version number to 2.80.2
+
+2009 Sun Jul 26
+---------------
+	- Changed [[:digit:]] references to [^-] in usr/sbin/slackpkg
+	  that makes some packages don't be found by slackpkg.
+					(Thanks Niels Horn and Grissiom)
+	- Removing leading spaces or tabs in mirrors file.
+	 				(Thanks Luke, Max, Cezar Rangel and
+					 other guys on slack-users-br list)
+	- Fix slackpkg.conf comments about BATCH mode. 
+					(Thanks Bruce Hill and AlienBob)
+	- Fix Indonesian mirrors.
+					(Thanks Willy Sudiarto Raharjo)
+	- Fix some Polish mirrors.
+					(Thanks Dexen deVries)
+	- Fix some UK mirrors.
+					(Thanks Andrew Fielder)
+	
+2009 Tue Jul 14
+---------------
+	- Added ARMedslack mirrors
+					(Thanks MoZes)
+	- Fix in generate-template to honor USE_INCLUDES option
+	- Released as 2.80.1
+
+2009 Wed Jul 08
+---------------
+	- Updated the Slackpkg's mirrors file.
+					(Thanks DagMoller)
+
+2009 Thu Jun 18
+---------------
+	- Merged some patches from Daniel Levai to enhance the config
+	  merge options.
+	- Released as 2.80
+
+2009 Thu Jun 11
+---------------
+	- Fixed a circular check: new-config needs update and update
+	  needs new-config.
+
+2009 Sun Jun 07
+---------------
+	- Change in doinst.sh to remove old pkglist at slackpkg's
+	  install.				(Thanks Klein)
+	- Change in slackpkg to use most of time ${TMPDIR}/pkglist instead
+	  ${WORKDIR}/pkglist.
+	- Released as 2.80beta3
+
+2009 Wed Jun 03
+---------------
+	- Change "tput cub1" to "tput sc" and "tput rc". This give back to
+	  us the option of multi-character "spinning bars".
+	- Create function showmenu to handle aligned options in post-functions.sh
+	- Released as 2.80beta2
+
+2009 Mon Jun 01
+---------------
+	- Use cub1 instead "cub N" in spinning bar. cub1 is
+	  supported by "linux" terminal.
+					(Thanks KynDer)
+	- Honors $PAGER variable if set.
+					(Thanks Daniel Levai)
+	- Added interactive merge option to post-functions.sh this makes
+	  very easier to manage .new files.
+					(Thanks Daniel Levai)
+	- Changes on post-functions.sh to show aligned options in "(P)rompt"
+	  and "(M)erge" functions.
+
+2009 Fri May 29
+---------------
+	- Eliminate ARCH test when new-config is called
+	- Use $PRIORITY in search command 
+					(Thanks Supergrilo)
+
+2009 Thu May 28
+---------------
+	- Released as 2.80beta1
+
+2009 Thu May 21
+---------------
+	- Fix usage message formatting
+	- new-config can run with outdated slackpkg.conf. With that
+	  you can use new-config to update the slackpkg.conf -;) 
+
+2009 Tue May 19
+---------------
+	- Released Slackware64! Congratulations to everyone in
+	  Slackware Team!
+	- Fix a problem with rpm2tgz package (again?!?!?)
+					Thanks Niels Horn
+	- Added Slackware key configuration to x86_64 architecture
+	- Added remove-template, install-template and generate-template
+	  to usage function
+
+2009 Mon May 04
+---------------
+	- Fixed .new detection.		(Thanks Stuart Winter)
+	- Renamed the "CHECKPKG" variable to "CHECKMD5" (and changed the 
+	  relevant command line options; this is more appropriate for what
+	  the function does (it checks md5 sums of the packages), and it's 
+	  easier to tell the difference between it and CHECKGPG at a glance.
+					(Thanks Robby Workman)
+	- Added check to see if slackpkg.conf version matches slackpkg
+	  version.
+	- More changes in install-new's ChangeLog.txt parsing
+
+2009 Sun May 03
+---------------
+	- Added generate-template, remove-template, and install-template 
+	  commands. The first one creates a template with all official 
+	  slackware packages installed in the machine. The template is saved 
+	  in /etc/slackpkg/templates. You can copy this template to other
+	  machines and install it with install-template.
+	- Added a spinning bar to give visual feedback of slackpkg "thinking".
+	- SPINNING is added to slackpkg.conf. It can enable (on) and
+	  disable (off) the spinning bar.
+	- Added USE_INCLUDES to manage whether template includes should be
+	  processed by slackpkg.
+	- ARCH now needs to be in the same format of "uname -m".
+	  slackpkg can change it automagically. If you need to override what 
+	  slackpkg detects, set the variable in slackpkg.conf.
+	- MAIN is now handled internally by slackpkg. You can no longer change
+	  this variable using slackpkg.conf.
+	- PKGMAIN is set by slackpkg to the appropriate value for your 
+	  ARCH port.
+	- SLACKKEY now can be set in slackpkg.conf. Usually slackpkg will 
+	  handle this automagically.
+	- FIRST, SECOND, THIRD, FOURTH, and FIFTH are replaced by a single 
+	  array: PRIORITY. The contents of those five variables now are 
+	  inside PRIORITY array.
+	- Added support to Slackintosh with the inclusion of "mac" series.
+	- Some changes in install-new's ChangeLog.txt parsing
+	- slackpkg.conf bumped to version 2.8
+	- updated slackpkg and slackpkg.conf manpages
+
+2009 Sat May 02
+---------------
+	- Released as slackpkg 2.71.1
+
+2009 Sat Apr 25
+---------------
+	- Fixed parsing of .t[blxg]z extension in packages
+	  with tgz, tlz, tbz or txz inside file name.
+					(Thanks Erik Jan Tromp)
+
+2009 Thu Apr 23
+---------------
+	- Released 2.71!
+
 2009 Sat Apr 18
 ---------------
 	- Removing source files in md5 package search
