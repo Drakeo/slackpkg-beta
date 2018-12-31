@@ -572,7 +572,7 @@ function listpkgname() {
 }
 
 function applyblacklist() {
-	grep -vEw -f ${TMPDIR}/blacklist
+	grep -vE -f ${TMPDIR}/blacklist
 }
 
 # Function to make install/reinstall/upgrade lists
@@ -584,7 +584,10 @@ function makelist() {
 
 	INPUTLIST=$@
 
-	grep -vE "(^#|^[[:blank:]]*$)" ${CONF}/blacklist > ${TMPDIR}/blacklist
+	grep -vE "(^#|^[[:blank:]]*$)" ${CONF}/blacklist | \
+	sed -E "s,^, ,;s,$, ,;s,^\s(extra|pasture|patches|slackware(|64)|testing|txz)\s,\1," \
+	> ${TMPDIR}/blacklist
+
 	if echo $CMD | grep -q install ; then
 		ls -1 $ROOT/var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
 	else
@@ -805,7 +808,7 @@ function searchlist() {
 	    # First is the package already installed?
 	    # Amazing what a little sleep will do
 	    # exclusion is so much nicer :)
-	    INSTPKG=$(ls -1 $ROOT/var/log/packages | \
+	    INSTPKG=$(ls -1 $ROOT/var/log/packages/ | \
 		grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+")
 
 		# INSTPKG is local version
@@ -970,9 +973,36 @@ function getpkg() {
 #
 function checkchangelog()
 {
+	if ! [ -e ${ROOT}/${WORKDIR}/CHECKSUMS.md5.asc ]; then
+		touch ${ROOT}/${WORKDIR}/CHECKSUMS.md5.asc
+	fi
+
 	if ! [ -e ${ROOT}/${WORKDIR}/ChangeLog.txt ]; then
 		touch ${ROOT}/${WORKDIR}/ChangeLog.txt
 	fi
+
+	# First we will download CHECKSUMS.md5.asc since it is a very small
+	# file and if it has not changed, we can know that the ChangeLog
+	# has not changed either. If it _has_ changed, we'll need to pull
+	# the ChangeLog to check that as well.
+	echo -e "\tDownloading..."
+	getfile ${SOURCE}CHECKSUMS.md5.asc $TMPDIR/CHECKSUMS.md5.asc
+	if ! grep -q "PGP" $TMPDIR/CHECKSUMS.md5.asc ; then
+		echo -e "\
+\nError downloading from $SOURCE.\n\
+Please check your mirror and try again."
+		cleanup
+	fi
+	if diff --brief ${ROOT}/${WORKDIR}/CHECKSUMS.md5.asc $TMPDIR/CHECKSUMS.md5.asc ; then
+		# Before returning with the result that these signatures (and
+		# therefore the ChangeLog) are the same, we need to copy the
+		# ChangeLog into ${TMPDIR} in case the user decides to
+		# "download all other files":
+		cp ${ROOT}/${WORKDIR}/ChangeLog.txt $TMPDIR/ChangeLog.txt
+		return 0
+	fi
+	# CHECKSUMS.md5.asc was different, so we'll go on to download and test
+	# the full ChangeLog.txt.
 
 	echo -e "\tDownloading..."
 	#
@@ -1040,7 +1070,10 @@ function updatefilelists()
 				echo -e "\
 \n\t\tERROR: Verification of the  gpg signature on CHECKSUMS.md5\n\
 \t\t       failed! This could mean that the file is out of date\n\
-\t\t       or has been tampered with.\n"
+\t\t       or has been tampered with. If you use mirrors.slackware.com\n\
+\t\t       as your mirror, this could also mean that the mirror to\n\
+\t\t       which you got redirected is not yet updated with the most\n\
+\t\t       recent changes in the Slackware tree.\n"
 				cleanup
 			fi
 		elif [ "$SLACKKEY" != "" ]; then
@@ -1172,14 +1205,14 @@ function sanity_check() {
 
 	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
 
-	for i in $(ls -1 $ROOT/var/log/packages | \
+	for i in $(ls -1 $ROOT/var/log/packages/ | \
 		egrep -- "^.*-(${ARCH}|fw|noarch)-[^-]+-upgraded"); do
 		REVNAME=$(echo ${i} | awk -F'-upgraded' '{ print $1 }')
 		mv $ROOT/var/log/packages/${i} $ROOT/var/log/packages/${REVNAME}
 		mv $ROOT/var/log/scripts/${i} $ROOT/var/log/scripts/${REVNAME}
 	done
 	
-	ls -1 $ROOT/var/log/packages | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$" | \
+	ls -1 $ROOT/var/log/packages/ | egrep "^.*-(${ARCH}|fw|noarch)-[^-]+$" | \
 				  batchcutpkg | sort > $TMPDIR/list1 
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2
 	FILES="$(diff $TMPDIR/list1 $TMPDIR/list2 | grep '<' | cut -f2 -d\ )"
@@ -1196,12 +1229,12 @@ function sanity_check() {
 
 	if [ "$DOUBLEFILES" != "" ]; then
 		echo -e "\
-You have a broken $ROOT/var/log/packages - with two versions of the same package.\n\
-The list of packages duplicated in your machine are shown below, but don't\n\
+You have a broken $ROOT/var/log/packages/ - with two versions of the same package.\n\
+The list of packages duplicated in your machine is shown below, but don't\n\
 worry about this list - when you select your action, slackpkg will show a\n\
 better list:\n"
 		for i in $DOUBLEFILES ; do
-			ls -1 $ROOT/var/log/packages |\
+			ls -1 $ROOT/var/log/packages/ |\
 				egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-"
 		done
 		echo -ne "\n\
@@ -1216,7 +1249,7 @@ Select your action (B/R/I): "
 			;;
 			R|r)
 				for i in $DOUBLEFILES ; do
-					FILE=$(ls -1 $ROOT/var/log/packages |\
+					FILE=$(ls -1 $ROOT/var/log/packages/ |\
 						egrep -i -- "^${i}-[^-]+-(${ARCH}|fw|noarch)-")
 					FILES="$FILES $FILE"
 				done
