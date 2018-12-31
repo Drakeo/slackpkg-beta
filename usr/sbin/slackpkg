@@ -18,7 +18,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 # Project Page: http://slackpkg.org/
-# Roberto F. Batista (aka PiterPunk) piterpunk@slackware.com
+# Roberto F. Batista (aka PiterPunk) piterpk@terra.com.br
 # Evaldo Gardenali (aka UdontKnow) evaldogardenali@fasternet.com.br
 #
 
@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.81.1
+VERSION=2.81beta
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 CONF=/etc/slackpkg
@@ -87,14 +87,6 @@ while [ -n "$1" ] ; do
       CHECKGPG=off
       shift
     ;;
-    -checksize=on)
-      CHECKSIZE=on
-      shift
-    ;;
-    -checksize=off)
-      CHECKSIZE=off
-      shift
-    ;;
     -postinst=on)
       POSTINST=on
       shift
@@ -125,10 +117,6 @@ while [ -n "$1" ] ; do
     ;;
     -dialog=off)
       DIALOG=off
-      shift
-    ;;
-    -dialog_maxargs=*)
-      DIALOG_MAXARGS=$(echo $1 | cut -f2 -d=)
       shift
     ;;
     -batch=on)
@@ -172,8 +160,8 @@ while [ -n "$1" ] ; do
       shift
     ;;
     -mirror=*)
-      SOURCE=$(echo $1 | cut -f2 -d=)
-      shift
+	SOURCE=$(echo $1 | cut -f2 -d=)
+	shift
     ;; 
     install|reinstall|upgrade|remove|blacklist|download)
       CMD=$1
@@ -211,7 +199,7 @@ while [ -n "$1" ] ; do
       CMD=$1
       shift
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
+	echo -e "\n$CMD: Ignoring extra arguments."
         shift $#
       fi
     ;;
@@ -226,7 +214,7 @@ while [ -n "$1" ] ; do
       fi
 
       if [ -n "$1" ]; then
-	echo -e "\n$CMD: Ignoring extra arguments: $@" >&2 >&1
+	echo -e "\n$CMD: Ignoring extra arguments."
         shift $#
       fi
     ;;
@@ -260,7 +248,7 @@ system_checkup
 #
 # Remember - the new function scripts need to be executable
 #
-for i in /usr/libexec/slackpkg/functions.d/*.sh; do
+for i in /usr/libexec/slackpkg/functions.d/*; do
 	if [ -x $i ]; then
 		. $i
 	fi
@@ -298,7 +286,7 @@ case "$CMD" in
 			if ! [ -e ~/.gnupg ]; then
 				mkdir ~/.gnupg
 			fi
-			getfile ${SOURCE}GPG-KEY $TMPDIR/gpgkey 
+			getfile /GPG-KEY $TMPDIR/gpgkey 
 			gpg --yes --batch --delete-key "$SLACKKEY" &>/dev/null
 			gpg --import $TMPDIR/gpgkey &>/dev/null && \
 			echo -e "\t\t\tSlackware Linux Project's GPG key added"

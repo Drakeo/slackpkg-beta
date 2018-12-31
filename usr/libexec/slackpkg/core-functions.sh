@@ -59,8 +59,6 @@ spinning() {
 function system_setup() {
 
 	# Set LOCAL if mirror isn't through network 
-	# If mirror is through network, select the command to fetch
-	# files and packages from there.
 	#
 	MEDIA=${SOURCE%%:*}
 	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
@@ -69,11 +67,6 @@ function system_setup() {
 		LOCAL=1
 	else
 		LOCAL=0
-		if [ "$DOWNLOADER" = "curl" ]; then
-			DOWNLOADER="curl ${CURLFLAGS} -o"
-		else
-                	DOWNLOADER="wget ${WGETFLAGS} -O"
-		fi
 	fi
 
 	# Set MORECMD, EDITCMD and check BATCH mode 
@@ -106,7 +99,7 @@ function system_setup() {
 	fi
 	case $ARCH in
 		i386|i486|i586|i686)
-			ARCH=[i]*[3456x]86[^_]*
+			ARCH=[i]*[3456x]86
 			SLACKKEY=${SLACKKEY:-"Slackware Linux Project <security@slackware.com>"}
 			PKGMAIN=${PKGMAIN:-slackware}
 		;;
@@ -153,7 +146,6 @@ function system_setup() {
 	SLACKCFVERSION=$(grep "# v[0-9.]\+" $CONF/slackpkg.conf | cut -f2 -dv)
 	CHECKSUMSFILE=$WORKDIR/CHECKSUMS.md5
 	KERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
-	DIALOG_MAXARGS=${DIALOG_MAXARGS:-19500}
 	echo "$0 $VERSION - Slackware Linux $SLACKWARE_VERSION" > $TMPDIR/timestamp
 }
 
@@ -437,45 +429,10 @@ slackpkg - version $VERSION\n\
 \tslackpkg help\t\t\tShow this screen. 
 \nYou can see more information about slackpkg usage and some examples
 in slackpkg's manpage. You can use partial package names (such as xorg 
-instead of xorg-server, xorg-docs, etc), or even Slackware series
+instead xorg-server, xorg-docs, etc), or even Slackware series
 (such as "n","ap","xap",etc) when searching for packages.
 "
 	cleanup
-}
-
-# Verify if we have enough disk space to install selected package
-#
-function havespace() {
-	local DSIZE
-	local ASIZE
-	DSIZE=$(grep "^${1}" ${TMPDIR}/tempsize | \
-		awk 'BEGIN { tot=0 } { tot+=$2 } END { print int(tot/1024)+1}')
-	ASIZE=$(df ${1} | awk '/% \// { print 0+$(NF-2) }')
-	if [ ${DSIZE} -gt ${ASIZE} ] ; then
-		ISOK=0
-	fi
-}
-
-function checksize() {
-	local i
-	local ISOK=1
-	tar -tvf ${1} | tr -s ' ' | grep -v '^[dl]' | cut -f6,3 -d\ | \
-	sed 's,[^/]*$,,' | awk '
-	{ size[$2]+=$1 }
-	END { 
-	    	for (i in size) { 
-			print "/"i,size[i]
-		}
-	}' > ${TMPDIR}/tempsize
-
-	for i in $(tac /proc/mounts | grep "^/dev" |cut -f2 -d\ ); do
-		if grep -q "^${i}" ${TMPDIR}/tempsize ; then
-			havespace ${i}
-			grep -v "^${i}/" ${TMPDIR}/tempsize > ${TMPDIR}/tempsize.tmp
-			mv ${TMPDIR}/tempsize.tmp ${TMPDIR}/tempsize
-		fi	
-	done
-	echo ${ISOK}
 }
 
 # Verify if the package was corrupted by checking md5sum
@@ -557,7 +514,7 @@ function listpkgname() {
 	cut -f2 -d\  ${TMPDIR}/tmplist | sort > ${TMPDIR}/lpkg
 	cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
 		cut -f2-6 -d\ |sort | uniq -u | \
-		cut -f1 -d\  | uniq > ${TMPDIR}/dpkg
+		cut -f1 -d\  > ${TMPDIR}/dpkg
 }
 
 # Function to make install/reinstall/upgrade lists
@@ -597,15 +554,15 @@ function makelist() {
 	case "$CMD" in
 		download)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
-					LIST="$LIST $(grep " ${i} " ${TMPDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
+				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
+					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6,8 -d\  --output-delimiter=.)"
 				done
 				LIST="$(echo -e $LIST | sort -u)"
 			done
 		;;
 		blacklist)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
 						grep -w -- "${ARGUMENT}" | cut -f2 -d\  | sort -u); do
 					grep -qx "${i}" ${CONF}/blacklist || LIST="$LIST $i"
 				done
@@ -654,7 +611,7 @@ function makelist() {
 			for i in $(comm -2 -3 ${TMPDIR}/lpkg ${TMPDIR}/spkg) ; do
 				PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 				[ ! "$PKGDATA" ] && continue
-				checkblacklist && continue
+				checkblacklist
 				LIST="$LIST ${PKGDATA[5]}" 
 				unset PKGDATA
 			done				
@@ -721,7 +678,7 @@ function makelist() {
 			else
 				for i in ${PRIORITY[@]}; do
 					PKGS=$(grep "^${i}.*${PATTERN}" \
-						${TMPDIR}/pkglist | cut -f6 -d\ )
+						${WORKDIR}/pkglist | cut -f6 -d\ )
 					for FULLNAME in $PKGS ; do
 						NAME=$(cutpkg ${FULLNAME})
 						echo $LIST | \
@@ -825,14 +782,14 @@ function showlist() {
 function getfile() {
         if [ "$LOCAL" = "1" ]; then
                 echo -e "\t\t\tLinking $1..."
-                if [ -e $1 ]; then
-			ln -s $1 $2 2>/dev/null
+                if [ -e ${SOURCE}$1 ]; then
+			ln -s ${SOURCE}$1 $2 2>/dev/null
 		else
 			return 1
 		fi
         else
                 echo -e "\t\t\tDownloading $1..."
-		$DOWNLOADER $2 $1
+                wget ${WGETFLAGS} ${SOURCE}$1 -O $2
         fi
 }                                                       
 
@@ -846,7 +803,7 @@ function getpkg() {
 	local NAMEPKG
 	local CACHEPATH
 
-	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${TMPDIR}/pkglist) )
+	PKGNAME=( $(grep -w -m 1 -- "${1/%.t[blxg]z/}" ${WORKDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}.${PKGNAME[7]}
 	FULLPATH=${PKGNAME[6]}
 	CACHEPATH=${TEMP}/${FULLPATH}
@@ -862,11 +819,20 @@ function getpkg() {
 		# to CACHEPATH else, download packages from remote host and 
 		# put then in CACHEPATH
 		#
-		getfile ${SOURCE}${FULLPATH}/${NAMEPKG} \
-			${CACHEPATH}/${NAMEPKG} 
-		if [ "$CHECKGPG" = "on" ]; then
-			getfile ${SOURCE}${FULLPATH}/${NAMEPKG}.asc \
-				${CACHEPATH}/${NAMEPKG}.asc
+		if [ "${LOCAL}" = "1" ]; then 
+                	echo -e "\tLinking $NAMEPKG..."
+			[ -e ${SOURCE}${FULLPATH}/${NAMEPKG} ] && \
+			ln -s ${SOURCE}${FULLPATH}/${NAMEPKG} ${CACHEPATH}
+			if [ "$CHECKGPG" = "on" ]; then
+				[ -e ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ] && \
+				ln -s ${SOURCE}${FULLPATH}/${NAMEPKG}.asc ${CACHEPATH}
+			fi
+		else
+                	echo -e "\tDownloading $NAMEPKG..."
+			wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}
+			if [ "$CHECKGPG" = "on" ]; then
+				wget ${WGETFLAGS} -P ${CACHEPATH} -nd ${SOURCE}${FULLPATH}/${NAMEPKG}.asc
+			fi
 		fi
 
 		if ! [ -e ${CACHEPATH}/$1 ]; then
@@ -876,15 +842,6 @@ function getpkg() {
 		fi
 	else
 		echo -e "\tPackage $1 is already in cache - not downloading" 
-	fi
-
-	# Check if we have sufficient disk space to install selected package
-        if [ "$CHECKSIZE" = "on" ] && [ "$ISOK" = "1" ]; then
-		ISOK=$(checksize ${CACHEPATH}/$1)
-		if [ "$ISOK" = "0" ]; then
-			ERROR="Insufficient disk space"
-			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
-		fi
 	fi
 
 	# If MD5SUM checks are enabled in slackpkg.conf, check the
@@ -956,7 +913,7 @@ function checkchangelog()
 	# Download ChangeLog.txt first of all and test if it's equal
 	# or different from our already existent ChangeLog.txt 
 	#
-	getfile ${SOURCE}ChangeLog.txt $TMPDIR/ChangeLog.txt
+	getfile ChangeLog.txt $TMPDIR/ChangeLog.txt
 	if ! grep -q "[a-z]" $TMPDIR/ChangeLog.txt ; then
 		echo -e "\
 \nError downloading from $SOURCE.\n\
@@ -993,14 +950,14 @@ function updatefilelists()
 	#
 	echo -e "\t\tList of all files"
 	for i in ${PRIORITY[@]} ; do 
-		getfile ${SOURCE}${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
+		getfile ${i}/MANIFEST.bz2 $TMPDIR/${i}-MANIFEST.bz2 && \
 			DIRS="$DIRS $i"
 	done
 
 	ISOK="1"
 	echo -e "\t\tChecksums"
-	getfile ${SOURCE}CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
-	getfile ${SOURCE}CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
+	getfile CHECKSUMS.md5 ${TMPDIR}/CHECKSUMS.md5
+	getfile CHECKSUMS.md5.asc ${TMPDIR}/CHECKSUMS.md5.asc
 	if ! [ -e "${TMPDIR}/CHECKSUMS.md5" ]; then
 		echo -e "\
 \n\t\tWARNING: Your mirror appears incomplete and is missing the\n\
@@ -1033,7 +990,7 @@ function updatefilelists()
 
 	ISOK="1"
 	echo -e "\t\tPackage List"
-	getfile ${SOURCE}FILELIST.TXT ${TMPDIR}/FILELIST.TXT
+	getfile FILELIST.TXT ${TMPDIR}/FILELIST.TXT
 	if [ "$CHECKMD5" = "on" ]; then
 		CHECKSUMSFILE=${TMPDIR}/CHECKSUMS.md5
 		ISOK=$(checkmd5 ${TMPDIR}/FILELIST.TXT)
@@ -1083,7 +1040,7 @@ function updatefilelists()
 	# 
 	echo -e "\t\tPackage descriptions"
 	for i in $DIRS; do
-		getfile ${SOURCE}${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
+		getfile ${i}/PACKAGES.TXT $TMPDIR/${i}-PACKAGES.TXT
 	done
 
 	# Format FILELIST.TXT

@@ -33,16 +33,7 @@ if [ "$DIALOG" = "on" ] || [ "$DIALOG" = "ON" ]; then
 			done
 			HINT=""
 		fi
-		
-		# This is needed because dialog have a limit of arguments.
-		# This limit is around 20k characters in slackware 10.x
-		# Empiric tests on slackware 13.0 got a limit around 139k.
-		# If we exceed this limit, dialog got a terrible error, to
-		# avoid that, if the number of arguments is bigger than 
-		# DIALOG_MAXARGS we remove the hints. If even without hints 
-		# we can't got less characters than DIALOG_MAXARGS we give an 
-		# error message to the user ask him to not use dialog
-		if [ $(wc -c $TMPDIR/dialog.tmp | cut -f1 -d\ ) -ge $DIALOG_MAXARGS ]; then
+		if [ $(wc -c $TMPDIR/dialog.tmp | cut -f1 -d\ ) -ge 19500 ]; then
 			mv $TMPDIR/dialog.tmp $TMPDIR/dialog2.tmp
 			awk '{ NF=3 ; print $0 }' $TMPDIR/dialog2.tmp > $TMPDIR/dialog.tmp
 			HINT=""
