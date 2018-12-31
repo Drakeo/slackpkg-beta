@@ -10,92 +10,6 @@ showdiff() {
 	fi
 }
 
-showmenu() {
-	echo -e "$1 - \c"
-	tput sc
-	shift
-	while [ $# -gt 0 ]; do
-		echo -e "$1"
-		tput rc
-		shift
-	done
-}
-
-mergenew() {
-	BASENAME=$(basename $i .new)
-	FILEPATH=$(dirname $i)
-	FULLNAME="${FILEPATH}/${BASENAME}"
-
-	if [ -e "${FULLNAME}" ]; then
-		# in media res. we do the merging right away, but we later allow the user to redo it, if not satisfied with the results.
-		rm -f "${FULLNAME}.smerge"
-		echo "Enter '?' in the prompt (%) to display help."
-		cp -p "${FULLNAME}.new" "${FULLNAME}.smerge" # <- this is so that the installed merged file will have the same permissions as the .new file
-		sdiff -s -o "${FULLNAME}.smerge" "${FULLNAME}" "${FULLNAME}.new"
-
-		GOEXM=0
-		while [ $GOEXM -eq 0 ]; do
-			showmenu $i "(E)dit the merged file" "(I)nstall the merged file" "View a diff between the merged and the (N)ew file" "View a diff between the (O)ld and the merged file" "(R)edo the merge" "(V)iew the merged file" "(B)ack to previous menu, and delete the merged file"
-			read ANSWER
-			case "$ANSWER" in
-				E|e)
-					if [ -f "${FULLNAME}.smerge" ]; then
-						$EDITCMD "${FULLNAME}.smerge"
-					else
-						echo -e "Nothing was merged yet..."
-					fi
-				;;
-				I|i)
-					if [ -f "${FULLNAME}.smerge" ]; then
-						if [ -e "${FULLNAME}" ]; then
-							mv "${FULLNAME}" "${FULLNAME}.orig"
-						fi
-						mv "${FULLNAME}.smerge" "${FULLNAME}"
-						rm -f "${FULLNAME}.new"
-						GOEXM=1
-						GOEX=1
-					else
-						echo -e "Nothing was merged yet..."
-					fi
-				;;
-				N|n)
-					if [ -f "${FULLNAME}.smerge" ]; then
-						diff -u "${FULLNAME}.smerge" "${FULLNAME}.new" | $MORECMD
-					else
-						echo -e "Nothing was merged yet..."
-					fi
-				;;
-				O|o)
-					if [ -f "${FULLNAME}.smerge" ]; then
-						diff -u "${FULLNAME}" "${FULLNAME}.smerge" | $MORECMD
-					else
-						echo -e "Nothing was merged yet..."
-					fi
-				;;
-				R|r)
-					rm -f "${FULLNAME}.smerge"
-					echo "Enter '?' in the prompt (%) to display help."
-					cp -p "${FULLNAME}.new" "${FULLNAME}.smerge" # <- this is so that the installed merged file will have the same permissions as the .new file
-					sdiff -s -o "${FULLNAME}.smerge" "${FULLNAME}" "${FULLNAME}.new"
-				;;
-				V|v)
-					if [ -f "${FULLNAME}.smerge" ]; then
-						$MORECMD "${FULLNAME}.smerge"
-					else
-						echo -e "Nothing was merged yet..."
-					fi
-				;;
-				B|b)
-					rm -f "${FULLNAME}.smerge"
-					GOEXM=1
-				;;
-			esac
-		done
-	else
-		echo "file $FULLNAME doesn't exist"
-	fi
-}
-
 overold() {
 	BASENAME=$(basename $i .new)
 	FILEPATH=$(dirname $i)
@@ -133,7 +47,7 @@ looknew() {
 Some packages had new configuration files installed.
 You have four choices:
 
-	(K)eep the old files and consider .new files later
+	(K)eep the old files and consider .new files later 
 
 	(O)verwrite all old files with the new ones. The
 	   old files will be stored with the suffix .orig
@@ -165,8 +79,7 @@ What do you want (K/O/R/P)?"
 				for i in $FILES; do
 					GOEX=0
 					while [ $GOEX -eq 0 ]; do
-						echo
-						showmenu $i "(K)eep" "(O)verwrite" "(R)emove" "(D)iff" "(M)erge"
+						echo -e "$i - (K)eep|(O)verwrite|(R)emove|(D)iff?"
 						read ANSWER
 						case $ANSWER in
 							O|o)
@@ -179,9 +92,6 @@ What do you want (K/O/R/P)?"
 							;;
 							D|d)
 								showdiff $1
-							;;
-							M|m)
-								mergenew $1
 							;;
 							K|k|*)
 								GOEX=1

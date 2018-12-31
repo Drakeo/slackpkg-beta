@@ -36,6 +36,7 @@ spinning() {
 		SPIN=( "|" "/" "-" "\\" )
 	fi
 	COUNT=${#SPIN[@]}
+	CUB=${#SPIN[0]}
 		
 	[ -n "$1" ] && WAITFILE=$1 || WAITFILE=/tmp/waitfile
 	[ -n "$2" ] && SPININTERVAL=$2 || SPININTERVAL=0.1
@@ -44,9 +45,8 @@ spinning() {
 	tput civis 
 	while [ -e $WAITFILE ] ; do 
 		count=$(( count + 1 ))
-		tput sc
 		echo -n ${SPIN[$(( count % COUNT ))]}
-		tput rc
+		tput cub $CUB
 		sleep $SPININTERVAL
 	done
 	tput cnorm
@@ -67,27 +67,17 @@ function system_setup() {
 		LOCAL=0
 	fi
 	
-	# Set MORECMD, EDITCMD and check BATCH mode 
+	# Set MORECMD and check BATCH mode 
 	#
 	if [ "$BATCH" = "on" ] || [ "$BATCH" = "ON" ]; then
 		DIALOG=off
 		SPINNING=off
 		MORECMD=cat
-		EDITCMD=vi
 		if [ "$DEFAULT_ANSWER" = "" ]; then
 			DEFAULT_ANSWER=n
 		fi
 	else
-		if [ "${PAGER}" ]; then	
-			MORECMD="${PAGER}"
-		else
-			MORECMD=more
-		fi
-		if [ "${EDITOR}" ]; then	
-			EDITCMD="${EDITOR}"
-		else
-			EDITCMD=vi
-		fi
+		MORECMD=more
 	fi
 
 	# Set ARCH, SLACKKEY and others by slackware port
@@ -165,7 +155,7 @@ as example or overwrite it with slackpkg.conf.new.\n\
 
 	# Check if ARCH is set
 	#
-	if [ "$ARCH" = "none" ] && [ "$CMD" != "new-config" ]; then
+	if [ "$ARCH" = "none" ]; then
 		echo -e "\
 \nThe ARCH values in slackpkg.conf are now different. You can remove\n\
 ARCH from there, and slackpkg you use your current ARCH or you can look\n\
@@ -212,27 +202,19 @@ the problem.\n"
 	# Checking if is the first time running slackpkg
 	#                                               
 	if ! [ -f ${WORKDIR}/pkglist ] && [ "$CMD" != "update" ]; then
-		if [ "$SOURCE" = "" ]; then
-                	echo -e "\
+		echo -e "\
 \nThis appears to be the first time you have run slackpkg.\n\
 Before you install|upgrade|reinstall anything, you need to uncomment\n\
 ONE mirror in ${CONF}/mirrors and run:\n\n\
 \t# slackpkg update\n\n\
 You can see more information about slackpkg functions in slackpkg manpage."
-			cleanup
-		elif [ "$CMD" != "new-config" ]; then
-			echo -e "\
-\nThe package list is missing.\n\
-Before you install|upgrade|reinstall anything you need to run:\n\n\
-\t# slackpkg update\n"
-			cleanup
-		fi
+		cleanup
 	fi                                                      
 
 
 	# Checking if /etc/slackpkg/mirrors are in correct syntax.
 	#                                                         
-	if [ "$SOURCE" = "" ] ; then
+	if [ "$SOURCE" = "" ]; then
 		echo -e "\
 \nYou do not have any mirror selected in ${CONF}/mirrors\n\
 Please edit that file and uncomment ONE mirror.  Slackpkg\n\
@@ -311,9 +293,9 @@ as slackpkg cannot function without awk.\n"
 		echo -e "\n\
 gpg package not found!  Please disable GPG in ${CONF}/slackpkg.conf or install\n\
 the gnupg package.\n\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG \n\
-variable to "off" - you can see an example in the original slackpkg.conf.new\n\
-file distributed with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
+to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
+with slackpkg.\n"
 		sleep 5
 	fi 
 
@@ -324,7 +306,6 @@ file distributed with slackpkg.\n"
 	if [ "$GPGFIRSTTIME" = "0" ] && \
 		[ "$CMD" != "search" ] && \
 		[ "$CMD" != "info" ] && \
-		[ "$CMD" != "new-config" ] && \
 		[ "$CMD" != "update" ] && \
 		[ "$CMD" != "check-updates" ] && \
 		[ "$CHECKGPG" = "on" ]; then
@@ -333,9 +314,9 @@ You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
 \t# slackpkg update gpg\n\n\
 You can disable GPG checking too, but it is not a good idea.\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG\n\
-variable to "off" - you can see an example in the original slackpkg.conf.new\n\
-file distributed with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
+to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
+with slackpkg.\n"
 		cleanup
 	fi
 	echo 
@@ -452,7 +433,7 @@ function givepriority {
 	
         for DIR in ${PRIORITY[@]} ; do
 		[ "$PKGDATA" ] && break
-                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${TMPDIR}/pkglist) )
+                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${WORKDIR}/pkglist) )
                 if [ "$PKGDATA" ]; then
                         checkblacklist
                         if [ "$?" = "1" ]; then
@@ -478,7 +459,6 @@ function makelist() {
 	INPUTLIST=$@
 
 	ls -1 /var/log/packages/* | awk -f /usr/libexec/slackpkg/pkglist.awk > ${TMPDIR}/tmplist
-	cp ${WORKDIR}/pkglist ${TMPDIR}/pkglist
 
 	touch ${TMPDIR}/waiting
 
@@ -521,7 +501,7 @@ function makelist() {
 		;;
 		install|upgrade|reinstall)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(grep -w -- "${ARGUMENT}" ${TMPDIR}/pkglist | cut -f2 -d\  | sort -u); do
+				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
 					givepriority $i
 					[ ! "$FULLNAME" ] && continue
 
@@ -547,7 +527,7 @@ function makelist() {
 		;;
 		remove)
 			for ARGUMENT in $(echo $INPUTLIST); do
-				for i in $(cat ${TMPDIR}/pkglist ${TMPDIR}/tmplist | \
+				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
 					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u); do
 					PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 					[ ! "$PKGDATA" ] && continue
@@ -1112,18 +1092,16 @@ parse_template() {
 }
 
 generate_template() {
-	if [ "$USE_INCLUDES" = "on" ]; then
-		(
-			cd $TEMPLATEDIR
-			if [ "$(ls *.template 2>/dev/null)" != "" ]; then
-				echo -e "\tParsing actual template files:"
-				for i in *.template ; do
-					echo -e "\t\t$i"
-					parse_template $i
-				done
-			fi
-		)
-	fi
+	(
+		cd $TEMPLATEDIR
+		if [ "$(ls *.template 2>/dev/null)" != "" ]; then
+			echo -e "\tParsing actual template files:"
+			for i in *.template ; do
+				echo -e "\t\t$i"
+				parse_template $i
+			done
+		fi
+	)
 
 	touch $TMPDIR/allheaders
 
@@ -1132,7 +1110,7 @@ generate_template() {
 	[ "$SPINNING" = "off" ] || spinning ${TMPDIR}/waiting &
 	for i in /var/log/packages/* ; do 
 		PKGNAME=$( cutpkg $(basename $i))
-		grep -q " $PKGNAME " ${WORKDIR}/pkglist && \
+		grep -q " $PKGNAME " /var/lib/slackpkg/pkglist && \
 			echo $PKGNAME >> $TMPDIR/$TEMPLATE.work
 	done  
 	rm $TMPDIR/waiting

@@ -118,7 +118,7 @@ DOWNLOAD_ALL=off
 # Enables (on) or disables (off) the dialog interface in slackpkg.  Default=on
 DIALOG=on
 
-# Enables (on) or disables (off) the non-interactive mode.  If set to "on",
+# Enables (on) or disables (off) the non-interactive mode.  If set to "off,"
 # slackpkg will run without asking the user anything, and answer all questions
 # with DEFAULT_ANSWER.  If you do any upgrades using this mode, you'll need to
 # run "slackpkg new-config" later to find and merge any .new files.

@@ -32,11 +32,11 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.80.2
+VERSION=2.80beta1
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 CONF=/etc/slackpkg
-SOURCE=$(sed -e 's/^[[:blank:]]*//' $CONF/mirrors | grep -m1 -e "^\([a-z]\)")
+SOURCE=$(grep -e "^\([a-z]\)" $CONF/mirrors)
 . $CONF/slackpkg.conf
 ERROR=""
 
@@ -426,14 +426,14 @@ case "$CMD" in
 	"search")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g'`
 		# Search filelist.gz for possible matches
-		for i in ${PRIORITY[@]}; do
+		for i in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
 			if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
 				PKGS="$(zegrep $PATTERN ${WORKDIR}/${i}-filelist.gz | \
 					cut -d\  -f 1 | awk -F'/' '{print $NF}')"
 				for j in $PKGS ; do
 					NEWONE=`cutpkg ${j}`
 					echo $PACKAGES | \
-						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+" && \
+						grep -qe "${NEWONE}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+" && \
 						continue
 					PACKAGES="$PACKAGES $j"
 				done
@@ -462,7 +462,7 @@ The list below shows all packages with the selected pattern.\n"
 			# Amazing what a little sleep will do
 			# exclusion is so much nicer :)
 			INSTPKG=$(ls -1 /var/log/packages | \
-				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[^-]\+")
+				grep -e "^${BASENAME}-[^-]\+-\(${ARCH}\|fw\|noarch\)-[[:digit:]]\+")
 
 			    # INSTPKG is local version
 			    if [ ! "${INSTPKG}" = "" ]; then
@@ -484,7 +484,7 @@ The list below shows all packages with the selected pattern.\n"
 	"info")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g'`
 		NAME=$(cutpkg $PATTERN)
-		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[^-]+/,/^$/ {
+		awk -F: "/PACKAGE NAME:.* ${NAME}-[^-]+-(${ARCH}|fw|noarch)-[[:digit:]]+/,/^$/ {
                                 found=1
 				 if (\$1 ~ /"$NAME"/) {
 				 print \$PATTERN 
