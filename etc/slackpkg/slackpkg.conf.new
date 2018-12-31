@@ -1,0 +1,100 @@
+#
+# slackpkg.conf - Configuration for SlackPkg
+# v2.0
+#
+
+#
+# SlackPkg - An Automated packaging tool for Slackware Linux
+# Copyright (C) 2003,2004,2005,2006,2007 Roberto F. Batista, Evaldo Gardenali
+#
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation; either version 2 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
+#
+# Project Page: http://slackpkg.sf.net/
+# Roberto F. Batista (aka PiterPunk) piterpk@terra.com.br
+# Evaldo Gardenali (aka UdontKnow) evaldogardenali@fasternet.com.br
+#
+
+# Select the architecture of your system
+# x86 (the main arch for slackware)
+ARCH=i[3456]86
+# x86_64 (slamd64 and BlueWhite64)
+#ARCH=x86_64 
+# PowerPC (slackintosh)
+#ARCH=powerpc
+# S/390 (slack/390)
+#ARCH=s390
+# Only to remember, the slackware official ports are only x86 and s390 and
+# i don't have one s390 to test. If you test in other archs and have
+# suggestions or patches, let me know (piterpk@terra.com.br)
+
+# Downloaded files will be in directory below:
+TEMP=/var/cache/packages
+
+# Package lists, file lists and others will be at WORKDIR:
+WORKDIR=/var/lib/slackpkg
+
+# Special options for wget (default is WGETFLAGS="--passive-ftp")
+WGETFLAGS="--passive-ftp"
+
+# If DELALL is "on", all downloaded files will be removed after install.
+DELALL=on
+
+# If CHECKPKG is "on", the system will check the md5sums of all packages before
+# install/upgrade/reinstall is performed.
+CHECKPKG=on
+
+# If NOGPG is "off", the system will verify the GPG signature of each package
+# before install/upgrade/reinstall is performed.
+NOGPG=off
+
+# The lines below will set the download priority. By default, patches dir
+# will have the max priority, and the pasture will have the lowest.
+FIRST=patches
+SECOND=slackware
+THIRD=extra
+FOURTH=pasture
+FIFTH=testing
+
+# The default MAIN is "slackware", but some derived distros uses other
+# names as the main directory. Of course, MAIN needs to be listed in
+# the download priority directories -;)
+MAIN=slackware
+
+# The POSTINST variable, activate the slackpkg's post-install features, 
+# like check .new configuration files and verify if your kernel is new. 
+# If you don't like this feature, change the POSTINST=on to POSTINST=off
+POSTINST=on
+
+# The ONOFF variable is a default behavior of dialog interface. If you
+# set this to 'on' then all packages will be selected by default. If you
+# prefer opposite option (all unchecked), set this to off.
+# Default=on
+ONOFF=on
+
+# If DOWNLOAD_ALL is "on", all files will be downloaded and after that, the
+# operation (install or upgrade) will be performed. If you had a limited
+# time to be online, maybe it's a good idea; but you need a lot of disk
+# space. If DOWNLOAD_ALL is set to "off", the files will be downloaded 
+# and operation (install or upgrade) will be performed one-by-one. This
+# is the default and traditional slackpkg behavior
+DOWNLOAD_ALL=off
+
+# Enables "on" and disables "off" the dialog interface in slackpkg
+DIALOG=on
+
+#
+# The MIRROR is set from mirrors's file. You only need uncomment the selected
+# mirror. Uncomment one mirror only.
+#
