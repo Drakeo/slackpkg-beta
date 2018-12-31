@@ -269,7 +269,8 @@ function checkmd5() {
 	local MD5ORIGINAL
 	local MD5DOWNLOAD
 
-	MD5ORIGINAL=$(grep -m1 "/$(basename $1)$" ${CHECKSUMSFILE}| cut -f1 -d \ )
+	MD5ORIGINAL=$(	grep -v "/source/" ${CHECKSUMSFILE} |\
+			grep -m1 "/$(basename $1)$" | cut -f1 -d \ )
 	MD5DOWNLOAD=$(md5sum ${1} | cut -f1 -d \ )
 	if [ "$MD5ORIGINAL" = "$MD5DOWNLOAD" ]; then
 		echo 1 

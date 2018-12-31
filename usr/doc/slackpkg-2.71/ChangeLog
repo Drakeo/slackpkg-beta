@@ -1,6 +1,15 @@
 ChangeLog
 ---------
 
+2009 Sat Apr 18
+---------------
+	- Removing source files in md5 package search
+					(Thanks Alan Hicks)
+	- Fixed problem in search function and packages with
+	  letters, _ or . in RELEASE field.
+					(Thanks mrgobling)
+	- Released as 2.71beta5 (i think last one)
+
 2009 Wed Apr 15
 ---------------
 	- Fix problem in checking md5 of some packages
