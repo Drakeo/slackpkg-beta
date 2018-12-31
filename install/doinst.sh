@@ -29,7 +29,7 @@ copy_mirror_file() {
       SRCMIRROR=mirrors-x86.sample
     ;;
   esac
-  cp usr/doc/slackpkg-2.82.3beta1/$SRCMIRROR etc/slackpkg/mirrors.new
+  cp usr/doc/slackpkg-2.82.3beta2/$SRCMIRROR etc/slackpkg/mirrors.new
 }
 
 copy_mirror_file
