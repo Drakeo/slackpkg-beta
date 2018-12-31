@@ -1,6 +1,6 @@
 showdiff() {
-	BASENAME=`basename $i .new`
-	FILEPATH=`dirname $i`
+	BASENAME=$(basename $i .new)
+	FILEPATH=$(dirname $i)
 	FULLNAME="${FILEPATH}/${BASENAME}"
 
 	if [ -e ${FULLNAME} ]; then
@@ -11,8 +11,8 @@ showdiff() {
 }
 
 overold() {
-	BASENAME=`basename $i .new`
-	FILEPATH=`dirname $i`
+	BASENAME=$(basename $i .new)
+	FILEPATH=$(dirname $i)
 	FULLNAME="${FILEPATH}/${BASENAME}"
 
 	if [ -e ${FULLNAME} ]; then
@@ -27,9 +27,9 @@ removeold() {
 
 looknew() {
 	echo -e "\nSearching for NEW configuration files"
-	FILES=`find /etc -name "*.new" -not -name "rc.inet1.conf.new" \
+	FILES=$(find /etc -name "*.new" -not -name "rc.inet1.conf.new" \
 		-not -name "group.new" -not -name "passwd.new" \
-		-not -name "shadow.new" -not -name "gshadow.new" 2>/dev/null`
+		-not -name "shadow.new" -not -name "gshadow.new" 2>/dev/null)
 	if [ "$FILES" != "" ]; then
 		echo -e "\n\
 Some packages had new configuration files installed.
@@ -99,12 +99,12 @@ What do you want (K/O/R/P)?"
 }
 
 lookkernel() {
-	NEWKERNELMD5=`md5sum /boot/vmlinuz 2>/dev/null`
+	NEWKERNELMD5=$(md5sum /boot/vmlinuz 2>/dev/null)
 	if [ "$KERNELMD5" != "$NEWKERNELMD5" ]; then
 		echo -e "\n
 Your kernel image was updated.  We highly recommend you run: lilo
 Do you want slackpkg to run lilo now? (Y/n)"
-		read ANSWER
+		answer
 		if [ "$ANSWER" != "n" ] && [ "$ANSWER" != "N" ]; then
 			/sbin/lilo
 		fi

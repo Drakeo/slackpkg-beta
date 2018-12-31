@@ -72,7 +72,7 @@ THIRD=extra
 FOURTH=pasture
 FIFTH=testing
 
-# The default MAIN is "slackware", but some derived distros uses other
+# The default MAIN is "slackware", but some derived distros use other
 # names as the main directory. Of course, MAIN needs to be listed in
 # the download priority directories
 MAIN=slackware

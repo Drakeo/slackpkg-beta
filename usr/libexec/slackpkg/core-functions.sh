@@ -42,7 +42,7 @@ In ${CONF}/slackpkg.conf.new, there is a sample of the new configuration.\n\
 
 	# Checking if another instance of slackpkg is running
 	#
-	if [ "`ls /var/lock/slackpkg.* 2>/dev/null`" ] && \
+	if [ "$(ls /var/lock/slackpkg.* 2>/dev/null)" ] && \
 		[ "$CMD" != "search" ]; then
 		echo -e "\
 \nAnother instance of slackpkg is running. If this is not correct, you can\n\
@@ -86,7 +86,7 @@ Please edit that file and uncomment ONE mirror.  Slackpkg\n\
 only works with ONE mirror selected.\n"
 		cleanup
 	else
-		COUNT=`echo $SOURCE | wc -w | tr -d " "`
+		COUNT=$(echo $SOURCE | wc -w | tr -d " ")
 		if [ "$COUNT" != "1" ]; then
 			echo -e "\n\
 Slackpkg only works with ONE mirror selected.  Please edit your\n\
@@ -109,7 +109,7 @@ official mirrors can be kept up-to-date.\n"
 
 	# Checking if the user has the permissions to install/upgrade/update
 	#                                                                    
-	if [ "`id -u`" != "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ]; then
+	if [ "$(id -u)" != "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ]; then
 		echo -e "\n\
 Only root can install, upgrade, or remove packages.\n\
 Please log in as root or contact your system administrator.\n"
@@ -118,9 +118,10 @@ Please log in as root or contact your system administrator.\n"
 
 	# Check if the mirror are local (cdrom or file)
 	#
-	MEDIA=`echo ${SOURCE} | cut -f1 -d:`
-	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ]; then
-		SOURCE=/`echo ${SOURCE} | cut -f3- -d/`
+	MEDIA=$(echo ${SOURCE} | cut -f1 -d:)
+	if [ "$MEDIA" = "cdrom" ] || [ "$MEDIA" = "file" ] || \
+	   [ "$MEDIA" = "local" ]; then
+		SOURCE=/$(echo ${SOURCE} | cut -f3- -d/)
 		LOCAL=1
 	fi
 
@@ -135,7 +136,7 @@ use slackpkg.\n"
 	# Check if we have md5sum in the PATH. Without md5sum, disables
 	# md5sum checks
 	#
-	if ! [ `which md5sum 2>/dev/null` ]; then
+	if ! [ $(which md5sum 2>/dev/null) ]; then
 		CHECKPKG=off
 	elif ! [ -f ${WORKDIR}/CHECKSUMS.md5 ] && \
 		[ "$CMD" != "update" ] && \
@@ -171,8 +172,8 @@ with slackpkg.\n"
 
 	# Check if the Slackware GPG key are found in the system
 	#                                                       
-	GPGFIRSTTIME="`gpg --list-keys \"$SLACKKEY\" 2>/dev/null \
-			| grep -c \"$SLACKKEY\"`"
+	GPGFIRSTTIME="$(gpg --list-keys \"$SLACKKEY\" 2>/dev/null \
+			| grep -c \"$SLACKKEY\")"
 	if [ "$GPGFIRSTTIME" = "0" ] && [ "$CMD" != "search" ] && [ "$CMD" != "info" ] && \
 			[ "$CMD" != "update" ] && [ "$CHECKGPG" = "on" ]; then
 		echo -e "\n\
@@ -258,8 +259,8 @@ function checkpkg() {
 	local MD5ORIGINAL
 	local MD5DOWNLOAD
 
-	MD5ORIGINAL=`grep "/${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ `
-	MD5DOWNLOAD=`md5sum ${TEMP}/${1} | cut -f1 -d \ `
+	MD5ORIGINAL=$(grep "/${NAMEPKG}$" ${WORKDIR}/CHECKSUMS.md5| cut -f1 -d \ )
+	MD5DOWNLOAD=$(md5sum ${TEMP}/${1} | cut -f1 -d \ )
 	if [ "$MD5ORIGINAL" = "$MD5DOWNLOAD" ]; then
 		echo 1 
 	else
@@ -300,12 +301,12 @@ function givepriority {
 	
         for DIR in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
 		[ "$PKGDATA" ] && break
-                PKGDATA=( `grep "^${DIR} ${ARGUMENT} " ${WORKDIR}/pkglist` )
+                PKGDATA=( $(grep "^${DIR} ${ARGUMENT} " ${WORKDIR}/pkglist) )
                 if [ "$PKGDATA" ]; then
                         checkblacklist
                         if [ "$?" = "1" ]; then
 				NAME=${PKGDATA[1]}
-                                FULLNAME=`echo "${PKGDATA[5]}"`
+                                FULLNAME=$(echo "${PKGDATA[5]}")
 			else
 				unset PKGDATA
 				unset FULLNAME
@@ -344,31 +345,31 @@ function makelist() {
 
 	case "$CMD" in
 		download)
-			for ARGUMENT in `echo $INPUTLIST`; do
-				for i in `grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u`; do
-					LIST="$LIST `grep " ${i} " ${WORKDIR}/pkglist | cut -f6 -d \ `"
+			for ARGUMENT in $(echo $INPUTLIST); do
+				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
+					LIST="$LIST $(grep " ${i} " ${WORKDIR}/pkglist | cut -f6 -d \ )"
 				done
-				LIST="`echo -e $LIST | sort -u`"
+				LIST="$(echo -e $LIST | sort -u)"
 			done
 		;;
 		blacklist)
-			for ARGUMENT in `echo $INPUTLIST`; do
-				for i in `cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
-						grep -w -- "${ARGUMENT}" | cut -f2 -d\  | sort -u`; do
+			for ARGUMENT in $(echo $INPUTLIST); do
+				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+						grep -w -- "${ARGUMENT}" | cut -f2 -d\  | sort -u); do
 					grep -qx "${i}" ${CONF}/blacklist || LIST="$LIST $i"
 				done
 			done
 		;;
 		install|upgrade|reinstall)
-			for ARGUMENT in `echo $INPUTLIST`; do
-				for i in `grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u`; do
+			for ARGUMENT in $(echo $INPUTLIST); do
+				for i in $(grep -w -- "${ARGUMENT}" ${WORKDIR}/pkglist | cut -f2 -d\  | sort -u); do
 					givepriority $i
 					[ ! "$FULLNAME" ] && continue
 
 					case $CMD in
 						'upgrade')
-							VRFY=`cut -f6 -d\  ${TMPDIR}/tmplist | \
-							      grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+"`
+							VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | \
+							      grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+")
 							[ "${FULLNAME}" != "${VRFY}" ]  && \
 										[ "${VRFY}" ] && \
 								LIST="$LIST ${FULLNAME}"
@@ -386,10 +387,10 @@ function makelist() {
 			done
 		;;
 		remove)
-			for ARGUMENT in `echo $INPUTLIST`; do
-				for i in `cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
-					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u`; do
-					PKGDATA=( `grep -w -- "$i" ${TMPDIR}/tmplist` )
+			for ARGUMENT in $(echo $INPUTLIST); do
+				for i in $(cat ${WORKDIR}/pkglist ${TMPDIR}/tmplist | \
+					  	grep -w -- "${ARGUMENT}" | cut -f6 -d\  | sort -u); do
+					PKGDATA=( $(grep -w -- "$i" ${TMPDIR}/tmplist) )
 					[ ! "$PKGDATA" ] && continue
 					checkblacklist
 					LIST="$LIST ${PKGDATA[5]}" 
@@ -398,29 +399,29 @@ function makelist() {
 			done
 		;;
 		clean-system)
-	                for i in `cut -f6 -d\  ${TMPDIR}/tmplist`; do
-				NAME=`cutpkg $i`
-				if [ `cut -f2 -d\  ${WORKDIR}/pkglist |grep -cx "${NAME}"` = "0" ] &&
-					[ `grep -cx "${NAME}" $CONF/blacklist` = 0 ]; then
+	                for i in $(cut -f6 -d\  ${TMPDIR}/tmplist); do
+				NAME=$(cutpkg $i)
+				if [ $(cut -f2 -d\  ${WORKDIR}/pkglist |grep -cx "${NAME}") = "0" ] &&
+					[ $(grep -cx "${NAME}" $CONF/blacklist) = 0 ]; then
 					LIST="$LIST $i"
                         	fi
                 	done
 		;;
 		upgrade-all)
-			for i in `cut -f2 -d\  ${TMPDIR}/tmplist`; do
+			for i in $(cut -f2 -d\  ${TMPDIR}/tmplist); do
 
 				givepriority ${i}
 				[ ! "$FULLNAME" ] && continue
 
-				VRFY=`cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+"`
+				VRFY=$(cut -f6 -d\  ${TMPDIR}/tmplist | grep -x "${NAME}-[^-]\+-\(noarch\|${ARCH}\)-[^-]\+")
 				[ "${FULLNAME}" != "${VRFY}" ]  && \
 							[ "${VRFY}" ] && \
 					LIST="$LIST ${FULLNAME}"
 			done
 		;;
 		install-new)
-			for i in `awk -f /usr/libexec/slackpkg/install-new.awk ${WORKDIR}/ChangeLog.txt |\
-				  sort -u ` dialog aaa_terminfo fontconfig ; do
+			for i in $(awk -f /usr/libexec/slackpkg/install-new.awk ${WORKDIR}/ChangeLog.txt |\
+				  sort -u ) dialog aaa_terminfo fontconfig ; do
 	
 				givepriority $i
 				[ ! "$FULLNAME" ] && continue
@@ -430,14 +431,14 @@ function makelist() {
 			done
 		;;
 	esac
-	LIST=`echo -e $LIST | tr \  "\n"`
+	LIST=$(echo -e $LIST | tr \  "\n")
 	echo -e "DONE\n"
 }
 
 # Function to count total of packages
 #
 function countpkg() {
-	local COUNTPKG=`echo -e "$1" | wc -w`
+	local COUNTPKG=$(echo -e "$1" | wc -w)
 
 	if [ "$COUNTPKG" != "0" ]; then
 		echo -e "Total package(s): $COUNTPKG\n"
@@ -492,7 +493,7 @@ function getpkg() {
 	local FULLPATH
 	local NAMEPKG
 
-	PKGNAME=( `grep -w -m 1 -- "$1" ${WORKDIR}/pkglist` )
+	PKGNAME=( $(grep -w -m 1 -- "$1" ${WORKDIR}/pkglist) )
 	NAMEPKG=${PKGNAME[5]}
 	FULLPATH=${PKGNAME[6]}
 
@@ -529,7 +530,7 @@ function getpkg() {
 	# packages md5sum to detect if they are corrupt or not
 	#
 	if [ "$CHECKPKG" = "on" ] && [ "$ISOK" = "1" ]; then
-		ISOK=`checkpkg $1`
+		ISOK=$(checkpkg $1)
 		if [ "$ISOK" = "0" ]; then 
 			ERROR="md5sum"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
@@ -540,7 +541,7 @@ function getpkg() {
 	# disable GPG checking in /etc/slackpkg/slackpkg.conf
 	#
 	if [ "$CHECKGPG" = "on" ] && [ "$ISOK" = "1" ]; then
-		ISOK=`checkgpg $1`
+		ISOK=$(checkgpg $1)
 		if [ "$ISOK" = "0" ]; then 
 			ERROR="gpg"
 			echo -e "${NAMEPKG}:\t$ERROR" >> $TMPDIR/error.log
@@ -664,17 +665,17 @@ function sanity_check() {
 	local DOUBLEFILES
 	local ANSWER
 
-	for i in `ls -1 /var/log/packages | \
-		egrep -- "^.*-(${ARCH}|noarch)-[^-]+-upgraded"`; do
-		REVNAME=`echo ${i} | awk -F'-upgraded' '{ print $1 }'`
+	for i in $(ls -1 /var/log/packages | \
+		egrep -- "^.*-(${ARCH}|noarch)-[^-]+-upgraded"); do
+		REVNAME=$(echo ${i} | awk -F'-upgraded' '{ print $1 }')
 		mv /var/log/packages/${i} /var/log/packages/${REVNAME}
 		mv /var/log/scripts/${i} /var/log/scripts/${REVNAME}
 	done 
-	for i in `ls -1 /var/log/packages | egrep "^.*-(${ARCH}|noarch)-[^-]+$"`; do
+	for i in $(ls -1 /var/log/packages | egrep "^.*-(${ARCH}|noarch)-[^-]+$"); do
 		cutpkg $i
 	done | sort > $TMPDIR/list1
 	cat $TMPDIR/list1 | uniq > $TMPDIR/list2
-	FILES="`diff $TMPDIR/list1 $TMPDIR/list2 | grep '<' | cut -f2 -d\ `"
+	FILES="$(diff $TMPDIR/list1 $TMPDIR/list2 | grep '<' | cut -f2 -d\ )"
 	if [ "$FILES" != "" ]; then
 		for i in $FILES ; do
 			grep -qx "${i}" ${CONF}/blacklist && continue
@@ -704,8 +705,8 @@ Select your action (B/R/I): "
 			;;
 			R|r)
 				for i in $DOUBLEFILES ; do
-					FILE=`ls -1 /var/log/packages |\
-						egrep -i -- "^${i}-[^-]+-(${ARCH}|noarch)-"`
+					FILE=$(ls -1 /var/log/packages |\
+						egrep -i -- "^${i}-[^-]+-(${ARCH}|noarch)-")
 					FILES="$FILES $FILE"
 				done
 				showlist "$FILES" remove

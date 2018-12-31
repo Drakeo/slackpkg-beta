@@ -1,0 +1,202 @@
+.TH SLACKPKG.CONF 5 "Jan 2008" slackpkg-2.70 ""
+.SH NAME
+.B slackpkg.conf
+\- Configuration data for slackpkg
+
+.SH DESCRIPTION
+
+The slackpkg.conf file contains information for
+.B slackpkg
+(8), an automated tool for managing Slackware Linux packages.
+
+The slackpkg.conf file is a sequence of shell script variables, and each 
+variable controls one aspect of slackpkg.  Comments begin with the # 
+character and end at end of the line, and comments may appear anywhere
+inside the slackpkg.conf file.  If some variable appears more than once 
+in the file, slackpkg will use the value that was defined last.
+
+Many variables can be overridden by options passed to slackpkg on the command
+line. If you need to override the value of 
+.B VARIABLE 
+, pass 
+.B -variable=value 
+on the command line just before the slackpkg action. Multiple variables may
+be overridden.
+
+EXAMPLE:  slackpkg -batch=yes -default_answer=y upgrade-all
+
+For configuration options that have only two states, possible values are
+either "on" or "off" unless otherwise indicated.
+
+The different configuration options are:
+
+.TP 5
+.B ARCH
+.br
+Chooses the system architecture.  Only the x86 and s390 architectures have
+official Slackware versions, and slackpkg is tested only on the x86 arch; 
+however, you can use it in other Slackware ports like Slackintosh or 
+ArmedSlack. 
+
+The default value of ARCH is i[3456]86 (x86).
+
+.TP 5
+.B TEMP
+.br
+Defines the location to which slackpkg will download the packages before
+installing/upgrading them. 
+
+The default value of TEMP is /var/cache/packages.
+
+.TP 5
+.B WORKDIR
+.br
+Defines the directory for package lists, file lists, and other information
+used by slackpkg as it works.  Do not change the value of this variable
+unless you know what you are doing.
+
+The default value of WORKDIR is /var/lib/slackpkg.
+
+.TP 5
+.B WGETFLAGS
+.br
+Selects special options for wget.  If you need to use multiple options,
+remember to put them between double quotes.  
+
+The default value of WGETFLAGS is "\--passive-ftp"
+
+.TP 5
+.B DELALL
+.br
+If set to "on", all downloaded files will be removed after slackpkg performs
+install or upgrade (this does NOT have any impact when slackpkg is run with
+"download").  If set to "off", the files will be kept in the directory
+defined in TEMP (as described above). 
+
+The default value of DELALL is "on". 
+.br
+From command line, you can use -delall=value.
+
+.TP 5
+.B CHECKPKG
+.br
+Enables (on) or disables (off) the checking of MD5 checksums of all downloaded 
+packages before installing or upgrading them.  
+
+The default value of CHECKPKG is "on".
+.br
+From command line, you can use -checkpkg=value.
+
+.TP 5
+.B CHECKGPG
+.br
+Enables (on) or disables (off) the check of GPG signature for each package 
+before install or upgrade.
+
+The default value of CHECKGPG is "on".
+.br
+From command line, you can use -checkgpg=value.
+
+.TP 5
+.B FIRST, SECOND, THIRD, FOURTH and FIFTH
+.br
+These lines select the priority at which directories on the mirror will have
+when slackpkg looks for packages.  If a package is found in more than one place, 
+the package in FIRST gets first priority, then SECOND, then THIRD, then FOURTH,
+and finally, the package found in FIFTH.  
+
+Default values (in order): /patches /slackware /extra /pasture /testing
+
+.TP 5
+.B MAIN
+.br
+Select which place defined in 
+.B FIRST, SECOND, THIRD, FOURTH 
+or 
+.B FIFTH
+\, is the main distribution.  On an official Slackware system, this will be
+"slackware" (which is the default).  This should always be the directory which
+contains the Slackware package set series (A, AP, D, E, F, ...)  This may have
+a different name in the unofficial Slackware ports, so adjust it as needed.
+
+.TP 5
+.B POSTINST
+.br
+Enables (on) or disables (off) slackpkg's post-installation features, such 
+as checking for new (*.new) configuration files and new kernel images, and 
+prompts you for what it should do.  
+
+The default value of POSTINST is "on". 
+.br
+From command line, you can use -postinst=value.
+ 
+.TP 5
+.B ONOFF
+.br
+The ONOFF variable sets the initial behavior of the dialog interface. 
+If you set this to "on" then all packages will be selected by default. 
+If you prefer the opposite option (all unchecked), then set this to "off". 
+
+The default value of ONOFF is "on". 
+.br
+From command line, you can use -onoff=value.
+
+.TP 5
+.B DOWNLOAD_ALL
+.br
+If this variable is set to "on", all files will be downloaded before the 
+requested operation (install or upgrade) is performed.   If set to "off", 
+then the files will be downloaded and the operation (install/upgrade) performed
+one by one.
+
+The default value of DOWNLOAD_ALL is "off". 
+.br
+From command line, you can use -download_all=value.
+
+.TP 5
+.B DIALOG
+.br
+Enables (on) or disables (off) the dialog interface. 
+
+The default value of DIALOG is "on". 
+.br
+From command line, you can use -dialog=value.
+
+.TP 5
+.B BATCH
+.br
+Enables (on) or disables (off) the non-interactive mode.  When run in batch
+mode, slackpkg will not prompt the user for anything; instead, all questions 
+will get DEFAULT_ANSWER (see below).  
+.br
+If you perform an upgrade using this mode, you will need to run 
+"slackpkg new-config" later to find and merge .new files.
+
+The default value of BATCH is "off". 
+.br
+From command line, you can use -batch=value.
+
+.TP 5
+.B DEFAULT_ANSWER
+.br
+This is the default answer to questions when slackpkg prompts the user for
+some information.  This is used only in non-interactive mode (when BATCH=yes
+or the user turns batch mode on via the command line); otherwise, this 
+variable has no effect.
+.br
+Valid values are "y" or "n".
+
+The default value of DEFAULT_ANSWER is "n". 
+.br
+From command line, you can use -default_answer=value.
+
+.SH FILES
+.TP 5
+.B /etc/slackpkg/slacpkg.conf
+
+.SH "SEE ALSO"
+.BR slackpkg (8)
+.BR pkgtool (8)
+.BR installpkg (8)
+.BR upgradepkg (8)
+.BR removepkg (8)

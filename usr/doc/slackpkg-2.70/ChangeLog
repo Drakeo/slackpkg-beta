@@ -1,6 +1,18 @@
 ChangeLog
 ---------
 
+2008 Wed Jan 10 
+---------------
+	- Updated "mirrors" file
+	- Fixed stall on "search" (reported by The-spiki)
+	- Fixed misbehavior of "update gpg" (The-spiki, again. Thanks!)
+	- Added local:// as the same of file:// and cdrom://
+	  in mirrors definitions. 	(thanks rworkman!)
+	- Removed backticks `commmand` and using now $(command)
+					(thanks rworkman!)
+	- Fixed many en_BR bugs in docs and configuration files
+					(thanks again rworkman!)
+
 2008 Wed Jan 09
 ---------------
 	- A new command line parser, much better than the older one.
@@ -14,13 +26,13 @@ ChangeLog
 	  different mirror, using -mirror=URL/
 	- Additional check to see if "which" is there
 	- Added "new-config" option, it will search for .new files
-	  and ask to user what to do with them.
+	  and ask to user what to do with them. (suggested by X-Gizmo)
 
 2008 Wed Jan 07
 ---------------
 	- Added BATCH and DEFAULT_ANSWER options in slackpkg.conf,
 	  you can use those two to make automated upgrades without
-	  human intervention.
+	  human intervention. (suggested by Clayton and many others).
 
 2008 Wed Jan 04
 ---------------

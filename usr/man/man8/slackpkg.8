@@ -1,0 +1,231 @@
+.TH SLACKPKG 8 "Jan 2008" slackpkg-2.70 ""
+.SH NAME
+.B slackpkg
+\- Automated tool for managing Slackware Linux packages
+
+.SH SYNOPSIS
+.B slackpkg
+.B [OPTIONS]
+.B {install|remove|search|upgrade|reinstall|blacklist} 
+.B {
+.I PATTERN
+.B |
+.I FILE
+.B }
+
+.B slackpkg [OPTIONS] info 
+.I PACKAGE 
+
+.B slackpkg [OPTIONS] update [gpg]
+
+.B slackpkg [OPTIONS] (clean-system|upgrade-all|install-new|new-config) 
+
+.SH DESCRIPTION
+Slackpkg is a tool for those who want to easily install or upgrade
+packages via the network.  With slackpkg, you can have a minimal
+installation of Slackware Linux and install/upgrade only those packages
+you need most.
+
+You don't need to setup NFS or make dozens of CDs for all your
+computers; all you need to do is to type one command and all of
+the latest official Slackware packages will be at your fingertips.
+
+.SH INSTRUCTIONS
+Slackpkg has many features.  It can search for specific files, remove
+all third-party packages in your system, install packages added to
+Slackware since your last update, show package descriptions, etc.
+
+Before you do anything, you will need to uncomment one mirror in
+/etc/slackpkg/mirrors file and run:
+  # slackpkg update
+
+The "update" action will download and format the list of files and
+packages in Slackware.  Every time this list is changed, the update
+need to be run.
+
+The main features of Slackpkg are the ones directly related to
+package management: install, upgrade, and remove packages. 
+To do any of these tasks, the Slackpkg syntax is:
+
+  # slackpkg [OPTIONS] <action> {PATTERN|FILE}
+
+OPTIONS can be one or more of the many configuration options listed in
+/etc/slackpkg/slackpkg.conf.  There are equivalent command line options
+for most of the configuration directives found in slackpkg.conf - see the
+.B slackpkg.conf(5)
+man-page to see what options are available.
+
+PATTERN can be a package name or just part of package name.  It can also 
+be a software series (like kde, a, ap, ...).
+.br 
+FILE is a file with a list of PATTERNs inside: either one per line,
+or several per line with spaces as separators.
+
+Slackpkg can be used to upgrade the whole distribution. 
+.br
+The usual way is to do:
+
+  # slackpkg update
+  # slackpkg install-new
+  # slackpkg upgrade-all
+  # slackpkg clean-system
+
+Following this manual page, you can find what each of these (and other)
+actions does. 
+
+.SH ACTIONS 
+.TP 5
+.B update
+.br
+update will download the latest package lists from a Slackware mirror
+(or your CD).  It's a good idea to run
+  # slackpkg update
+.br
+before attempting to upgrade, install, or search for packages. 
+.br
+If you need to update Slackware's GPG key, run
+  # slackpkg update gpg
+.br
+The GPG key doesn't change. This should be a "one time" command - run it
+once and forget it... 
+
+.TP 5
+.B search
+.br
+You can search the official Slackware packages for any file in the
+Slackware distribution.  Do you need a strange library?  Use search to
+find it.
+  # slackpkg search packagename
+.br
+All packages matching "packagename" will be shown, thus you can see whether
+the packages are installed or not; if not, you can download and install
+them with other slackpkg actions.
+
+.TP 5
+.B install
+.br
+Installation of a package is very simple. You need only type:
+  # slackpkg install package
+.br
+and the package will be downloaded and installed.
+.br
+You can't use the "install" option to install an already installed package, 
+but you may reinstall or upgrade it.
+
+.TP 5
+.B upgrade
+.br
+upgrade installs the most recent official version of the specified package(s).
+
+upgrade will not attempt to install new packages (use the install
+function for that purpose; the latest official version of the package
+will be installed).
+.TP 5
+.B reinstall
+.br
+In case you mistakenly corrupt something, the reinstall option will allow 
+you to reinstall the same version of a package that is currently installed.
+
+.TP 5   
+.B remove
+.br
+With remove, you can remove certain installed packages.  As an example:
+  # slackpkg remove kde
+.br
+will remove all packages with "kde" in their name.
+
+.TP 5
+.B blacklist
+.br
+With this action, you can "blacklist" certain packages.
+.br
+Blacklisted packages will not be installed, upgraded, or removed by slackpkg. 
+If you want to remove some package from the black list, please edit 
+/etc/slackpkg/blacklist.
+
+.TP 5
+.B download
+.br
+This action tells slackpkg to download the packages, but not to install them.
+They will be placed in /var/cache/packages, and you can 
+install/upgrade/reinstall them later (or burn them to CD).
+
+.TP 5
+.B info
+.br
+This action prints information about the package(s): compressed and 
+uncompressed size, description, etcetera...
+
+.TP 5
+.B clean-system
+.br
+This action removes all of the packages that don't belong to a standard 
+Slackware installation.  With this option, you can clean up your system, 
+removing third-party packages as well as any packages that were removed 
+from the official Slackware package set.
+.br
+If you have some third party (or custom built) packages that you would like 
+to keep, you can temporarily add them to the list of blacklisted packages 
+before you run the 'clean-system' action.
+
+.TP 5
+.B upgrade-all
+.br
+This action upgrades every package installed on the system to the version in
+the official Slackware tree; this is the "good" way to upgrade the entire
+system.  
+.br
+Remember to use the "install-new" action before you use "upgrade-all."
+
+.TP 5
+.B install-new
+This action installs any new packages that are added to the official 
+Slackware package set.  Run this if you are upgrading your system to 
+another Slackware version or if you are using -current. 
+.br
+If you want to install all uninstalled Slackware packages onto your system, 
+use the following command instead of the install-new action:
+ # slackpkg install slackware.
+
+.TP 5
+.B new-config
+This action searches for .new configuration files and ask the user what to 
+do with those files. 
+.br
+new-config is very useful when you perform an upgrade and leave the 
+configuration files to be reviewed later.  Instead of a manual search,
+diff, and replace; you can use the new-config action.
+
+.SH FILES
+.TP 5
+.B /etc/slackpkg/mirrors	
+File to specify the location from which to download packages
+.TP 5
+.B /etc/slackpkg/slackpkg.conf	
+General configuration of slackpkg
+.TP 5
+.B /etc/slackpkg/blacklist
+List of packages to skip
+.TP 5
+.B /usr/libexec/slackpkg
+Contains slackpkg core and additional functions
+.TP 5
+.B /var/lib/slackpkg
+Slackpkg internal use - Formatted package lists, copy of
+ChangeLog.txt, list of files, etcetera...
+
+.SH "SEE ALSO"
+.BR slackpkg.conf (5),
+.BR installpkg (8),
+.BR upgradepkg (8),
+.BR explodepkg (8),
+.BR makepkg (8),
+.BR pkgtool (8).
+
+.SH AUTHORS
+.TP 5
+Piter PUNK aka Roberto F Batista 
+<piterpk AT terra DOT com DOT br>
+.TP 5
+Evaldo Gardenali aka UdontKnow 
+<evaldo AT fasternet DOT com DOT br>
