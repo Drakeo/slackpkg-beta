@@ -1,6 +1,36 @@
 ChangeLog
 ---------
 
+2009 Wed Jun 03
+---------------
+	- Change "tput cub1" to "tput sc" and "tput rc". This give back to
+	  us the option of multi-character "spinning bars".
+	- Create function showmenu to handle aligned options in post-functions.sh
+	- Released as 2.80beta2
+
+2009 Mon Jun 01
+---------------
+	- Use cub1 instead "cub N" in spinning bar. cub1 is
+	  supported by "linux" terminal.
+					(Thanks KynDer)
+	- Honors $PAGER variable if set.
+					(Thanks Daniel Levai)
+	- Added interactive merge option to post-functions.sh this makes
+	  very easier to manage .new files.
+					(Thanks Daniel Levai)
+	- Changes on post-functions.sh to show aligned options in "(P)rompt"
+	  and "(M)erge" functions.
+
+2009 Fri May 29
+---------------
+	- Eliminate ARCH test when new-config is called
+	- Use $PRIORITY in search command 
+					(Thanks Supergrilo)
+
+2009 Thu May 28
+---------------
+	- Released as 2.80beta1
+
 2009 Thu May 21
 ---------------
 	- Fix usage message formatting

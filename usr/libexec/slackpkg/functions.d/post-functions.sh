@@ -10,6 +10,64 @@ showdiff() {
 	fi
 }
 
+showmenu() {
+	echo -e "$1 - \c"
+	tput sc
+	shift
+	while [ $# -gt 0 ]; do
+		echo -e "$1"
+		tput rc
+		shift
+	done
+}
+
+mergenew() {
+	BASENAME=$(basename $i .new)
+	FILEPATH=$(dirname $i)
+	FULLNAME="${FILEPATH}/${BASENAME}"
+
+	if [ -e ${FULLNAME} ]; then
+		GOEX=0
+		while [ $GOEX -eq 0 ]; do
+			showmenu $i "(V)iew merged file" "(M)erge interactively" "(I)nstall merged file" "(C)ancel"
+			read ANSWER
+			case $ANSWER in
+				V|v)
+					if [ -f ${FULLNAME}.smerge ]; then
+						$MORECMD ${FULLNAME}.smerge 
+					else
+						echo -e "Nothing was merged yet..."
+					fi
+				;;
+				M|m)
+					rm -f ${FULLNAME}.smerge
+					echo "Enter '?' in the prompt (%) to display help."
+					cp -p ${FULLNAME}.new ${FULLNAME}.smerge # <- this is so that the installed merged file will have the same permissions as the .new file
+					sdiff -s -o ${FULLNAME}.smerge ${FULLNAME} ${FULLNAME}.new
+				;;
+				C|c)
+					rm -f ${FULLNAME}.smerge
+					GOEX=1
+				;;
+				I|i)
+					if [ -f ${FULLNAME}.smerge ]; then
+						if [ -e ${FULLNAME} ]; then
+							mv ${FULLNAME} ${FULLNAME}.orig
+						fi
+						mv ${FULLNAME}.smerge ${FULLNAME}
+						rm -f ${FULLNAME}.new 
+						GOEX=1
+					else
+						echo -e "Nothing was merged yet..."
+					fi
+				;;
+			esac
+		done
+	else
+		echo "file $FULLNAME doesn't exist"
+	fi
+}
+
 overold() {
 	BASENAME=$(basename $i .new)
 	FILEPATH=$(dirname $i)
@@ -47,7 +105,7 @@ looknew() {
 Some packages had new configuration files installed.
 You have four choices:
 
-	(K)eep the old files and consider .new files later 
+	(K)eep the old files and consider .new files later
 
 	(O)verwrite all old files with the new ones. The
 	   old files will be stored with the suffix .orig
@@ -79,7 +137,7 @@ What do you want (K/O/R/P)?"
 				for i in $FILES; do
 					GOEX=0
 					while [ $GOEX -eq 0 ]; do
-						echo -e "$i - (K)eep|(O)verwrite|(R)emove|(D)iff?"
+						showmenu $i "(K)eep" "(O)verwrite" "(R)emove" "(D)iff" "(M)erge"
 						read ANSWER
 						case $ANSWER in
 							O|o)
@@ -92,6 +150,9 @@ What do you want (K/O/R/P)?"
 							;;
 							D|d)
 								showdiff $1
+							;;
+							M|m)
+								mergenew $1
 							;;
 							K|k|*)
 								GOEX=1

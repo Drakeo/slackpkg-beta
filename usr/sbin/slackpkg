@@ -32,7 +32,7 @@
 # CONF = configuration directory
 # SOURCE = A mirror of Slackware. Source can be sett by editing $CONF/mirrors
 #
-VERSION=2.80beta1
+VERSION=2.80beta2
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 SLACKWARE_VERSION=$(cat /etc/slackware-version | cut -f2 -d\ )
 CONF=/etc/slackpkg
@@ -426,7 +426,7 @@ case "$CMD" in
 	"search")
 		PATTERN=`echo $INPUTLIST | sed -e 's/\+/\\\+/g' -e 's/\./\\\./g' -e 's/ /\|/g'`
 		# Search filelist.gz for possible matches
-		for i in $FIRST $SECOND $THIRD $FOURTH $FIFTH ; do
+		for i in ${PRIORITY[@]}; do
 			if [ -e ${WORKDIR}/${i}-filelist.gz ]; then
 				PKGS="$(zegrep $PATTERN ${WORKDIR}/${i}-filelist.gz | \
 					cut -d\  -f 1 | awk -F'/' '{print $NF}')"

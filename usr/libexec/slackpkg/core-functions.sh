@@ -36,7 +36,6 @@ spinning() {
 		SPIN=( "|" "/" "-" "\\" )
 	fi
 	COUNT=${#SPIN[@]}
-	CUB=${#SPIN[0]}
 		
 	[ -n "$1" ] && WAITFILE=$1 || WAITFILE=/tmp/waitfile
 	[ -n "$2" ] && SPININTERVAL=$2 || SPININTERVAL=0.1
@@ -45,8 +44,9 @@ spinning() {
 	tput civis 
 	while [ -e $WAITFILE ] ; do 
 		count=$(( count + 1 ))
+		tput sc
 		echo -n ${SPIN[$(( count % COUNT ))]}
-		tput cub $CUB
+		tput rc
 		sleep $SPININTERVAL
 	done
 	tput cnorm
@@ -77,7 +77,11 @@ function system_setup() {
 			DEFAULT_ANSWER=n
 		fi
 	else
-		MORECMD=more
+		if [ "${PAGER}" ]; then	
+			MORECMD="${PAGER}"
+		else
+			MORECMD=more
+		fi
 	fi
 
 	# Set ARCH, SLACKKEY and others by slackware port
@@ -155,7 +159,7 @@ as example or overwrite it with slackpkg.conf.new.\n\
 
 	# Check if ARCH is set
 	#
-	if [ "$ARCH" = "none" ]; then
+	if [ "$ARCH" = "none" ] && [ "$CMD" != "new-config" ]; then
 		echo -e "\
 \nThe ARCH values in slackpkg.conf are now different. You can remove\n\
 ARCH from there, and slackpkg you use your current ARCH or you can look\n\
@@ -293,9 +297,9 @@ as slackpkg cannot function without awk.\n"
 		echo -e "\n\
 gpg package not found!  Please disable GPG in ${CONF}/slackpkg.conf or install\n\
 the gnupg package.\n\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
-to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
-with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG \n\
+variable to "off" - you can see an example in the original slackpkg.conf.new\n\
+file distributed with slackpkg.\n"
 		sleep 5
 	fi 
 
@@ -306,6 +310,7 @@ with slackpkg.\n"
 	if [ "$GPGFIRSTTIME" = "0" ] && \
 		[ "$CMD" != "search" ] && \
 		[ "$CMD" != "info" ] && \
+		[ "$CMD" != "new-config" ] && \
 		[ "$CMD" != "update" ] && \
 		[ "$CMD" != "check-updates" ] && \
 		[ "$CHECKGPG" = "on" ]; then
@@ -314,9 +319,9 @@ You need the GPG key of $SLACKKEY.\n\
 To download and install that key, run:\n\n\
 \t# slackpkg update gpg\n\n\
 You can disable GPG checking too, but it is not a good idea.\n\
-To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG variable\n\
-to "off" - you can see an example in the original slackpkg.conf.new file distributed\n\
-with slackpkg.\n"
+To disable GPG, edit slackpkg.conf and change the value of the CHECKGPG\n\
+variable to "off" - you can see an example in the original slackpkg.conf.new\n\
+file distributed with slackpkg.\n"
 		cleanup
 	fi
 	echo 
